@@ -3,7 +3,7 @@ package icfpc2018.bot.commands
 import icfpc2018.bot.state.*
 
 interface Command {
-    fun apply(bot: Bot, state: State)
+    fun apply(bot: Bot, state: State): State
 
     fun volatileCoords(bot: Bot) = emptyList<Point>()
 
