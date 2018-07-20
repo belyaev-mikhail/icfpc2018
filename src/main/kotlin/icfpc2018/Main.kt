@@ -13,7 +13,7 @@ fun main(args: Array<String>) {
 
     val model = Model.readMDL(modelFile)
 
-    val bot = Bot(1, Point(0, 0, 0), (2..20).toSet())
+    val bot = Bot(1, Point(0, 0, 0), (2..20).toSortedSet())
 
     val state = State(0, Harmonics.LOW, model, TreePVector.singleton(bot))
 
