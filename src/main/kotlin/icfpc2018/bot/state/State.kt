@@ -1,6 +1,5 @@
 package icfpc2018.bot.state
 
-import icfpc2018.bot.commands.Command
 import icfpc2018.bot.state.LinearCoordDiff.Axis.*
 import org.pcollections.TreePVector
 import kotlin.math.abs
@@ -12,26 +11,13 @@ enum class Harmonics {
 
 data class Bot(val id: Int, val position: Point, val seeds: Set<Int>)
 
-data class State(val energy: Int, val harmonics: Harmonics, val matrix: Model, val bots: TreePVector<Bot>)
+data class State(val energy: Int, val harmonics: Harmonics, val matrix: Model, val bots: TreePVector<Bot>) {
+    fun setEnergy(energy: Int) = State(energy, harmonics, matrix, bots)
+}
 
 data class Point(val x: Int, val y: Int, val z: Int) {
     companion object {
         val ZERO = Point(0, 0, 0)
-    }
-}
-
-class System(initialState: State) {
-
-    var currentState: State = initialState
-
-    var commandTrace = ArrayList<Command>()
-
-    var stateTrace = ArrayList<State>()
-
-    fun apply(bot: Bot, command: Command) {
-        commandTrace.add(command)
-        val state = command.apply(bot, currentState)
-        stateTrace.add(state)
     }
 }
 
