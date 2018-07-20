@@ -6,7 +6,7 @@ import icfpc2018.bot.state.Harmonics.LOW
 import org.pcollections.TreePVector
 
 interface Command {
-    fun apply(bot: Bot, state: State): State
+    fun apply(bot: Bot, state: State): State = state
 
     fun volatileCoords(bot: Bot) = listOf(bot.position)
 
@@ -27,9 +27,7 @@ object Halt : Command {
     }
 }
 
-object Wait : Command {
-    override fun apply(bot: Bot, state: State): State = state
-}
+object Wait : Command
 
 object Flip : Command {
     override fun apply(bot: Bot, state: State): State {
