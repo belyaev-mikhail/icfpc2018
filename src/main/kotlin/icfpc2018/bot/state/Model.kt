@@ -1,11 +1,13 @@
 package icfpc2018.bot.state
 
-import icfpc2018.util.BitInputStream
+import org.apache.commons.compress.utils.BitInputStream
 import org.pcollections.HashTreePSet
 import org.pcollections.MapPSet
+import java.io.File
 import java.io.InputStream
+import java.nio.ByteOrder
 
-data class Model(val data: MapPSet<Long> = HashTreePSet.empty()) {
+data class Model(val size: Int, private val data: MapPSet<Long> = HashTreePSet.empty()) {
     operator fun get(x: Int, y: Int, z: Int): Boolean = data.contains(convertCoordinates(x, y, z))
 
     fun set(x: Int, y: Int, z: Int, value: Boolean = true) = when(value) {
@@ -19,20 +21,47 @@ data class Model(val data: MapPSet<Long> = HashTreePSet.empty()) {
         fun readMDL(bs: InputStream): Model {
             val size = bs.read()
 
-            val stream = BitInputStream(bs)
+            val stream = BitInputStream(bs, ByteOrder.LITTLE_ENDIAN)
             var data = HashTreePSet.empty<Long>()
 
-            for(ix in 0..size) {
-                for(iy in 0..size) {
-                    for(iz in 0..size) {
+            for(ix in 0 until size) {
+                for(iy in 0 until size) {
+                    for(iz in 0 until size) {
                         val bit = stream.readBits(1)
 
-                        if(bit != 0) data = data + convertCoordinates(ix, iy, iz)
+                        check(bit != -1L)
+
+                        if(bit != 0L) data = data + convertCoordinates(ix, iy, iz)
                     }
                 }
             }
-            return Model(data)
+            return Model(size, data)
         }
+    }
+}
+
+fun main(args: Array<String>) {
+    val modelFile = File("models/LA001_tgt.mdl").inputStream()
+
+    val model = Model.readMDL(modelFile)
+
+    println(model)
+
+    for(y in 0..model.size) {
+        println("-".repeat(model.size * 2))
+
+        for(x in 0..model.size) {
+            for(z in 0..model.size) {
+                if(model[x,y,z]) {
+                    print("X ")
+                } else {
+                    print("  ")
+                }
+            }
+            println()
+        }
+
+        println("-".repeat(model.size * 2))
     }
 
 }
