@@ -1,4 +1,4 @@
 **.iml
-/**/target/**
+/target/**
 /lib/**
-/.idea/*
+/.idea/**
