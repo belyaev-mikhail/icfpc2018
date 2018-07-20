@@ -30,6 +30,28 @@ open class CoordDiff(val dx: Int, val dy: Int, val dz: Int) {
     val clen by lazy {
         max(abs(dx), max(abs(dy), abs(dz)))
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is CoordDiff) return false
+
+        if (dx != other.dx) return false
+        if (dy != other.dy) return false
+        if (dz != other.dz) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = dx
+        result = 31 * result + dy
+        result = 31 * result + dz
+        return result
+    }
+
+    override fun toString(): String {
+        return "CoordDiff(dx=$dx, dy=$dy, dz=$dz)"
+    }
 }
 
 operator fun Point.plus(cd: CoordDiff) = Point(x + cd.dx, y + cd.dy, z + cd.dz)
@@ -66,13 +88,13 @@ open class LinearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
     }
 }
 
-class LongCoordDiff(dx: Int, dy: Int, dz: Int) : LinearCoordDiff(dx, dy, dz) {
+class LongCoordDiff(dx: Int = 0, dy: Int = 0, dz: Int = 0) : LinearCoordDiff(dx, dy, dz) {
     init {
         assert(mlen <= 15)
     }
 }
 
-class ShortCoordDiff(dx: Int, dy: Int, dz: Int) : LinearCoordDiff(dx, dy, dz) {
+class ShortCoordDiff(dx: Int = 0, dy: Int = 0, dz: Int = 0) : LinearCoordDiff(dx, dy, dz) {
     init {
         assert(mlen <= 5)
     }
