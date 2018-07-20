@@ -24,27 +24,29 @@ class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
         var energy = currentState.energy
 
         energy += when (currentState.harmonics) {
-            Harmonics.LOW -> 30 // * R
-            Harmonics.HIGH -> 3 // * R
+            Harmonics.LOW -> 30 * currentState.matrix.sizeCubed
+            Harmonics.HIGH -> 3 * currentState.matrix.sizeCubed
         }
 
         energy += 20 * currentState.bots.size
 
-        var execState = currentState.setEnergy(energy)
+        var execState = currentState.copy(energy = energy)
 
         val ungroupedCommands = mutableListOf<Pair<Bot, Command>>()
 
-        for ((bot, command) in currentState.bots.zip(commands)) {
-            when (command) {
+        // TODO: Check volatile coords for non-intersection
+
+        for ((bot, cmd) in currentState.bots.zip(commands)) {
+            when (cmd) {
                 is SimpleCommand -> {
-                    if (Mode.DEBUG == mode) if (!command.check(bot, execState)) throw CommandCheckError()
-                    execState = command.apply(bot, execState)
-                    commandTrace.add(command)
+                    if (Mode.DEBUG == mode) if (!cmd.check(bot, execState)) throw CommandCheckError()
+                    execState = cmd.apply(bot, execState)
                 }
                 is FusionP, is FusionS -> {
-                    ungroupedCommands.add(bot to command)
+                    ungroupedCommands.add(bot to cmd)
                 }
             }
+            commandTrace.add(cmd)
         }
 
         val fusionPrimary = ungroupedCommands.filter { it.second is FusionP }
@@ -72,7 +74,6 @@ class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
         for ((bots, cmd) in groupedCommands) {
             if (Mode.DEBUG == mode) if (!cmd.check(bots, execState)) throw CommandCheckError()
             execState = cmd.apply(bots, execState)
-            cmd.innerCommands.forEach { commandTrace.add(it) }
         }
 
         stateTrace.add(execState)
