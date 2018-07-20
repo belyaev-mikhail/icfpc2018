@@ -7,29 +7,34 @@ import java.io.File
 import java.io.FileOutputStream
 
 fun main(args: Array<String>) {
+    for (i in 1..186) {
 
-    val targetModelFile = File("models/LA001_tgt.mdl").inputStream()
-    val targetModel = Model.readMDL(targetModelFile)
+        val currFileName = "LA%03d".format(i)
 
-    val model = Model(targetModel.size)
+        val targetModelFile = File("models/${currFileName}_tgt.mdl").inputStream()
+        val targetModel = Model.readMDL(targetModelFile)
 
-    val bot = Bot(1, Point(0, 0, 0), (2..20).toSortedSet())
+        val model = Model(targetModel.size)
 
-    val state = State(0, Harmonics.LOW, model, sortedSetOf(bot))
+        val bot = Bot(1, Point(0, 0, 0), (2..20).toSortedSet())
 
-    val system = System(state)
+        val state = State(0, Harmonics.LOW, model, sortedSetOf(bot))
 
-    val traceFile = File("traces/LA001.nbt").inputStream()
-    val commands: MutableList<Command> = mutableListOf()
-    while (traceFile.available() != 0) {
-        commands += Command.read(traceFile)
+        val system = System(state)
+
+        val traceFile = File("traces/$currFileName.nbt").inputStream()
+        val commands: MutableList<Command> = mutableListOf()
+        while (traceFile.available() != 0) {
+            commands += Command.read(traceFile)
+        }
+
+        val solution = Trace(commands)
+
+        solution.apply(system)
+
+        val ofile = FileOutputStream(File("traces/$currFileName.my.nbt"))
+        system.commandTrace.forEach { it.write(ofile) }
+
+        println(system.currentState.matrix == targetModel)
     }
-    println(commands.joinToString("\n"))
-
-    val solution = Trace(commands)
-
-    solution.apply(system)
-
-    val ofile = FileOutputStream(File("traces/LA001.my.nbt"))
-    system.commandTrace.forEach { it.write(ofile) }
 }
