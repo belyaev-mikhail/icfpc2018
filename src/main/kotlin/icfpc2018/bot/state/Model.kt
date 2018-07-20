@@ -8,12 +8,16 @@ import java.io.InputStream
 import java.nio.ByteOrder
 
 data class Model(val size: Int, private val data: MapPSet<Long> = HashTreePSet.empty()) {
+    operator fun get(point: Point) = get(point.x, point.y, point.z)
+
     operator fun get(x: Int, y: Int, z: Int): Boolean = data.contains(convertCoordinates(x, y, z))
 
     fun set(x: Int, y: Int, z: Int, value: Boolean = true) = when(value) {
         true -> copy(data = data + convertCoordinates(x, y, z))
         false -> copy(data = data - convertCoordinates(x, y, z))
     }
+
+    operator fun set(point: Point, value: Boolean) = set(point.x, point.y, point.z, value)
 
     companion object {
         private inline fun convertCoordinates(x: Int, y: Int, z: Int) = x + 256L * y + 256L * 256L * z

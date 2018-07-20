@@ -3,6 +3,7 @@ package icfpc2018.bot.commands
 import icfpc2018.bot.state.*
 import icfpc2018.bot.state.Harmonics.HIGH
 import icfpc2018.bot.state.Harmonics.LOW
+import org.pcollections.TreePVector
 
 interface Command {
     fun apply(bot: Bot, state: State): State
@@ -13,9 +14,8 @@ interface Command {
 }
 
 object Halt : Command {
-    override fun apply(bot: Bot, state: State) {
-        // state.bots = emptyList()
-    }
+    override fun apply(bot: Bot, state: State): State =
+            state.copy(bots = TreePVector.empty())
 
     override fun check(bot: Bot, state: State): Boolean {
         return when {
@@ -28,31 +28,33 @@ object Halt : Command {
 }
 
 object Wait : Command {
-    override fun apply(bot: Bot, state: State) {}
+    override fun apply(bot: Bot, state: State): State = state
 }
 
 object Flip : Command {
-    override fun apply(bot: Bot, state: State) {
-        state.harmonics = when (state.harmonics) {
+    override fun apply(bot: Bot, state: State): State {
+        return state.copy(harmonics = when (state.harmonics) {
             LOW -> HIGH
             HIGH -> LOW
-        }
+        })
     }
 }
 
 data class SMove(val lld: LongCoordDiff) : Command {
-    override fun apply(bot: Bot, state: State) {
-
-    }
+    override fun apply(bot: Bot, state: State) =
+            state.copy(
+                    energy = state.energy + 2 * lld.mlen,
+                    bots = state.bots - bot + bot.copy(position = bot.position + lld)
+            )
 
     override fun volatileCoords(bot: Bot): List<Point> =
             lld.affectedCoords(bot.position)
 
     override fun check(bot: Bot, state: State): Boolean {
         val newPos = bot.position + lld
-        // validate new pos
+        // TODO: validate new pos
         for (ac in lld.affectedCoords(bot.position)) {
-            // if (state.matrix[])
+            if (state.matrix[ac]) return false
         }
         return true
     }
