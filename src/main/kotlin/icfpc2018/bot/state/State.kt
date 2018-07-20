@@ -1,11 +1,20 @@
 package icfpc2018.bot.state
 
+import icfpc2018.bot.commands.Command
 import kotlin.math.abs
 import kotlin.math.max
 
-interface State
+enum class Harmonics {
+    LOW, HIGH
+}
 
-interface Bot
+data class Bot(val id: Int, var position: Point, val seeds: Set<Int>)
+
+class Matrix(val resolution: Int) {
+    val instance = Array(resolution) { Array(resolution) { BooleanArray(resolution) { false } } }
+}
+
+data class State(val trace: MutableList<Command>, var energy: Int, var harmonics: Harmonics, val matrix: Model, val bots: List<Bot>)
 
 data class Point(val x: Int, val y: Int, val z: Int)
 

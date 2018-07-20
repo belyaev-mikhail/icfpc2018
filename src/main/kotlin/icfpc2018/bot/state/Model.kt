@@ -1,4 +1,4 @@
-package icfpc2018
+package icfpc2018.bot.state
 
 import icfpc2018.util.BitInputStream
 import org.pcollections.HashTreePSet
@@ -6,11 +6,11 @@ import org.pcollections.MapPSet
 import java.io.InputStream
 
 data class Model(val data: MapPSet<Long> = HashTreePSet.empty()) {
-    operator fun get(x: Int, y: Int, z: Int): Boolean = data.contains(convertCoordinates(x,y,z))
+    operator fun get(x: Int, y: Int, z: Int): Boolean = data.contains(convertCoordinates(x, y, z))
 
     fun set(x: Int, y: Int, z: Int, value: Boolean = true) = when(value) {
-        true -> copy(data = data + convertCoordinates(x,y,z))
-        false -> copy(data = data - convertCoordinates(x,y,z))
+        true -> copy(data = data + convertCoordinates(x, y, z))
+        false -> copy(data = data - convertCoordinates(x, y, z))
     }
 
     companion object {
