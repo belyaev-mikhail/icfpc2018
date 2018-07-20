@@ -6,7 +6,9 @@ import icfpc2018.bot.state.Harmonics.LOW
 import org.pcollections.TreePVector
 import java.util.*
 
-interface Command {
+interface Command
+
+interface SimpleCommand : Command {
     fun apply(bot: Bot, state: State): State = state
 
     fun volatileCoords(bot: Bot) = listOf(bot.position)
@@ -14,7 +16,15 @@ interface Command {
     fun check(bot: Bot, state: State) = true
 }
 
-object Halt : Command {
+interface GroupCommand {
+    fun apply(bots: List<Bot>, state: State): State = state
+
+    fun volatileCoords(bots: List<Bot>) = bots.map { it.position }
+
+    fun check(bots: List<Bot>, state: State) = true
+}
+
+object Halt : SimpleCommand {
     override fun apply(bot: Bot, state: State): State =
             state.copy(bots = TreePVector.empty())
 
@@ -28,9 +38,9 @@ object Halt : Command {
     }
 }
 
-object Wait : Command
+object Wait : SimpleCommand
 
-object Flip : Command {
+object Flip : SimpleCommand {
     override fun apply(bot: Bot, state: State): State {
         return state.copy(harmonics = when (state.harmonics) {
             LOW -> HIGH
@@ -39,7 +49,7 @@ object Flip : Command {
     }
 }
 
-data class SMove(val lld: LongCoordDiff) : Command {
+data class SMove(val lld: LongCoordDiff) : SimpleCommand {
     override fun apply(bot: Bot, state: State) =
             state.copy(
                     energy = state.energy + 2 * lld.mlen,
@@ -59,7 +69,7 @@ data class SMove(val lld: LongCoordDiff) : Command {
     }
 }
 
-data class LMove(val sld1: ShortCoordDiff, val sld2: ShortCoordDiff) : Command {
+data class LMove(val sld1: ShortCoordDiff, val sld2: ShortCoordDiff) : SimpleCommand {
     override fun apply(bot: Bot, state: State) =
             state.copy(
                     energy = state.energy + 2 * (sld1.mlen + 2 + sld2.mlen),
@@ -80,7 +90,7 @@ data class LMove(val sld1: ShortCoordDiff, val sld2: ShortCoordDiff) : Command {
     }
 }
 
-data class Fission(val nd: NearCoordDiff, val m: Int) : Command {
+data class Fission(val nd: NearCoordDiff, val m: Int) : SimpleCommand {
     override fun apply(bot: Bot, state: State): State {
         val bids = bot.seeds.withIndex().groupBy { (idx, _) ->
             when (idx) {
@@ -114,14 +124,53 @@ data class Fission(val nd: NearCoordDiff, val m: Int) : Command {
     }
 }
 
-data class Fill(val nd: NearCoordDiff) : Command {
+data class Fill(val nd: NearCoordDiff) : SimpleCommand {
+    override fun apply(bot: Bot, state: State): State {
+        val newPos = bot.position + nd
+        val (newEnergy, shouldUpdate) = if (state.matrix[newPos]) {
+            state.energy + 6 to false
+        } else {
+            state.energy + 12 to true
+        }
+        return state.copy(
+                energy = newEnergy,
+                matrix = if (shouldUpdate) state.matrix.set(newPos, true) else state.matrix
+        )
+    }
+
+    override fun volatileCoords(bot: Bot): List<Point> =
+            listOf(bot.position, bot.position + nd)
+
+    override fun check(bot: Bot, state: State): Boolean {
+        val newPos = bot.position + nd
+        // TODO: validate new pos
+        return true
+    }
+}
+
+data class FusionP(val nd: NearCoordDiff) : SimpleCommand {
     override fun apply(bot: Bot, state: State) = TODO()
 }
 
-data class FusionP(val nd: NearCoordDiff) : Command {
+data class FusionS(val nd: NearCoordDiff) : SimpleCommand {
     override fun apply(bot: Bot, state: State) = TODO()
 }
 
-data class FusionS(val nd: NearCoordDiff) : Command {
-    override fun apply(bot: Bot, state: State) = TODO()
+data class FusionT(val p: FusionP, val s: FusionS) : GroupCommand {
+    override fun apply(bots: List<Bot>, state: State): State {
+        val (botP, botS) = bots
+        return state.copy(
+                energy = state.energy - 24,
+                bots = state.bots - botS
+                        - botP
+                        + botP.copy(seeds = TreeSet(botP.seeds + botS.id + botP.seeds))
+        )
+    }
+
+    override fun check(bots: List<Bot>, state: State): Boolean {
+        if (bots.size != 2) return false
+        val (botP, botS) = bots
+        if (botP.position + p.nd != botS.position + s.nd) return false
+        return true
+    }
 }
