@@ -22,6 +22,8 @@ interface GroupCommand {
     fun volatileCoords(bots: List<Bot>) = bots.map { it.position }
 
     fun check(bots: List<Bot>, state: State) = true
+
+    val innerCommands: List<SimpleCommand>
 }
 
 object Halt : SimpleCommand {
@@ -149,14 +151,18 @@ data class Fill(val nd: NearCoordDiff) : SimpleCommand {
 }
 
 data class FusionP(val nd: NearCoordDiff) : SimpleCommand {
-    override fun apply(bot: Bot, state: State) = TODO()
+    override fun apply(bot: Bot, state: State): State = TODO()
 }
 
 data class FusionS(val nd: NearCoordDiff) : SimpleCommand {
-    override fun apply(bot: Bot, state: State) = TODO()
+    override fun apply(bot: Bot, state: State): State = TODO()
 }
 
 data class FusionT(val p: FusionP, val s: FusionS) : GroupCommand {
+    override val innerCommands: List<SimpleCommand> by lazy {
+        listOf(p, s)
+    }
+
     override fun apply(bots: List<Bot>, state: State): State {
         val (botP, botS) = bots
         return state.copy(
