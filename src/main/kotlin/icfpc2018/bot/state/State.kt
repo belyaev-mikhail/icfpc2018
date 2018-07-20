@@ -3,6 +3,7 @@ package icfpc2018.bot.state
 import icfpc2018.bot.commands.Command
 import icfpc2018.bot.state.LinearCoordDiff.Axis.*
 import org.pcollections.TreePVector
+import java.util.*
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -10,7 +11,7 @@ enum class Harmonics {
     LOW, HIGH
 }
 
-data class Bot(val id: Int, val position: Point, val seeds: Set<Int>)
+data class Bot(val id: Int, val position: Point, val seeds: SortedSet<Int>)
 
 data class State(val energy: Int, val harmonics: Harmonics, val matrix: Model, val bots: TreePVector<Bot>)
 
