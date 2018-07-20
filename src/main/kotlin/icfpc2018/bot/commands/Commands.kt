@@ -5,7 +5,7 @@ import icfpc2018.bot.state.Harmonics.HIGH
 import icfpc2018.bot.state.Harmonics.LOW
 
 interface Command {
-    fun apply(bot: Bot, state: State)
+    fun apply(bot: Bot, state: State): State
 
     fun volatileCoords(bot: Bot) = listOf(bot.position)
 

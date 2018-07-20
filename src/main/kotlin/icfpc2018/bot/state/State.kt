@@ -9,17 +9,28 @@ enum class Harmonics {
     LOW, HIGH
 }
 
-data class Bot(val id: Int, var position: Point, val seeds: Set<Int>)
+data class Bot(val id: Int, val position: Point, val seeds: Set<Int>)
 
-class Matrix(val resolution: Int) {
-    val instance = Array(resolution) { Array(resolution) { BooleanArray(resolution) { false } } }
-}
-
-data class State(val trace: MutableList<Command>, var energy: Int, var harmonics: Harmonics, val matrix: Model, val bots: List<Bot>)
+data class State(val energy: Int, val harmonics: Harmonics, val matrix: Model, val bots: List<Bot>)
 
 data class Point(val x: Int, val y: Int, val z: Int) {
     companion object {
         val ZERO = Point(0, 0, 0)
+    }
+}
+
+class System(initialState: State) {
+
+    var currentState: State = initialState
+
+    var commandTrace = ArrayList<Command>()
+
+    var stateTrace = ArrayList<State>()
+
+    fun apply(bot: Bot, command: Command) {
+        commandTrace.add(command)
+        val state = command.apply(bot, currentState)
+        stateTrace.add(state)
     }
 }
 
