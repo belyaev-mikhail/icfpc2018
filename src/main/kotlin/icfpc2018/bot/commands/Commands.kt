@@ -4,13 +4,23 @@ import icfpc2018.bot.state.*
 import icfpc2018.bot.state.Harmonics.HIGH
 import icfpc2018.bot.state.Harmonics.LOW
 import org.apache.commons.compress.utils.BitInputStream
+import org.organicdesign.fp.collections.PersistentTreeSet
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteOrder
 import java.util.*
+import icfpc2018.bot.util.plus
+import icfpc2018.bot.util.minus
 
 fun Int.toBinary(size: Int) = ("0".repeat(32) + toString(2)).takeLast(size)
 fun Long.toBinary(size: Int = 8) = ("0".repeat(64) + toString(2)).takeLast(size)
+
+inline fun sbb(number: Int, from: Int, to: Int) = (((1 shl (to - from + 1)) - 1) and (number ushr from))
+inline fun Int.subBits(range: IntRange) = sbb(this, 7 - range.endInclusive, 7 - range.start)
+inline fun Long.subBits(range: IntRange) = toInt().subBits(range)
+
+inline fun Int.endsWithBits(bits: Int) = this and bits == bits
+inline fun Long.endsWithBits(bits: Int) = this.toInt() and bits == bits
 
 interface Command {
     fun write(stream: OutputStream) {
@@ -81,12 +91,11 @@ interface Command {
                 0b11111110L -> Wait
                 0b11111101L -> Flip
                 else -> {
-                    val firstByteEnc = firstByte.toBinary()
                     when {
-                        firstByteEnc.endsWith("0100") -> {
-                            val llda = firstByteEnc.substring(2..3).toInt(2)
-                            val secondByteEnc = bits.readBits(8).toBinary()
-                            val lldi = secondByteEnc.substring(3..7).toInt(2)
+                        firstByte.endsWithBits(0b0100) ->  {
+                            val llda = firstByte.subBits(2..3)
+                            val secondByteEnc = bits.readBits(8)
+                            val lldi = secondByteEnc.subBits(3..7)
                             val ldiff = when (llda) {
                                 1 -> LongCoordDiff(dx = lldi - 15)
                                 2 -> LongCoordDiff(dy = lldi - 15)
@@ -95,13 +104,12 @@ interface Command {
                             }
                             SMove(ldiff)
                         }
-
-                        firstByteEnc.endsWith("1100") -> {
-                            val sld2a = firstByteEnc.substring(0..1).toInt(2)
-                            val sld1a = firstByteEnc.substring(2..3).toInt(2)
-                            val secondByteEnc = bits.readBits(8).toBinary()
-                            val sld2i = secondByteEnc.substring(0..3).toInt(2)
-                            val sld1i = secondByteEnc.substring(4..7).toInt(2)
+                        firstByte.endsWithBits(0b1100) ->{
+                            val sld2a = firstByte.subBits(0..1)
+                            val sld1a = firstByte.subBits(2..3)
+                            val secondByteEnc = bits.readBits(8)
+                            val sld2i = secondByteEnc.subBits(0..3)
+                            val sld1i = secondByteEnc.subBits(4..7)
 
                             val sdiff1 = when (sld1a) {
                                 1 -> ShortCoordDiff(dx = sld1i - 5)
@@ -118,24 +126,24 @@ interface Command {
                             LMove(sdiff1, sdiff2)
                         }
 
-                        firstByteEnc.endsWith("111") -> {
-                            val nd = firstByteEnc.substring(0..4).toInt(2)
+                        firstByte.endsWithBits(0b111) -> {
+                            val nd = firstByte.subBits(0..4)
                             val dz = nd % 3 - 1
                             val dy = (nd / 3) % 3 - 1
                             val dx = nd / 9 - 1
                             FusionP(NearCoordDiff(dx, dy, dz))
                         }
 
-                        firstByteEnc.endsWith("110") -> {
-                            val nd = firstByteEnc.substring(0..4).toInt(2)
+                        firstByte.endsWithBits(0b110) -> {
+                            val nd = firstByte.subBits(0..4)
                             val dz = nd % 3 - 1
                             val dy = (nd / 3) % 3 - 1
                             val dx = nd / 9 - 1
                             FusionS(NearCoordDiff(dx, dy, dz))
                         }
 
-                        firstByteEnc.endsWith("101") -> {
-                            val nd = firstByteEnc.substring(0..4).toInt(2)
+                        firstByte.endsWithBits(0b101) -> {
+                            val nd = firstByte.subBits(0..4)
                             val dz = nd % 3 - 1
                             val dy = (nd / 3) % 3 - 1
                             val dx = nd / 9 - 1
@@ -145,15 +153,15 @@ interface Command {
                             Fission(NearCoordDiff(dx, dy, dz), secondByte.toInt())
                         }
 
-                        firstByteEnc.endsWith("011") -> {
-                            val nd = firstByteEnc.substring(0..4).toInt(2)
+                        firstByte.endsWithBits(0b011) -> {
+                            val nd = firstByte.subBits(0..4)
                             val dz = nd % 3 - 1
                             val dy = (nd / 3) % 3 - 1
                             val dx = nd / 9 - 1
                             Fill(NearCoordDiff(dx, dy, dz))
                         }
 
-                        else -> throw IllegalStateException("Cannot read byte: $firstByteEnc")
+                        else -> throw IllegalStateException("Cannot read byte: ${firstByte.toBinary()}")
                     }
                 }
             }
@@ -186,7 +194,7 @@ object Halt : SimpleCommand {
     }
 
     override fun apply(bot: Bot, state: State): State =
-            state.copy(bots = sortedSetOf())
+            state.copy(bots = PersistentTreeSet.empty())
 
     override fun check(bot: Bot, state: State): Boolean {
         return when {
@@ -221,8 +229,7 @@ data class SMove(val lld: LongCoordDiff) : SimpleCommand {
     override fun apply(bot: Bot, state: State) =
             state.copy(
                     energy = state.energy + 2 * lld.mlen,
-                    bots = (state.bots - bot
-                            + bot.copy(position = bot.position + lld)).toSortedSet()
+                    bots = state.bots - bot + bot.copy(position = bot.position + lld)
             )
 
     override fun volatileCoords(bot: Bot): List<Point> =
@@ -242,8 +249,7 @@ data class LMove(val sld1: ShortCoordDiff, val sld2: ShortCoordDiff) : SimpleCom
     override fun apply(bot: Bot, state: State) =
             state.copy(
                     energy = state.energy + 2 * (sld1.mlen + 2 + sld2.mlen),
-                    bots = (state.bots - bot
-                            + bot.copy(position = bot.position + sld1 + sld2)).toSortedSet()
+                    bots = state.bots - bot + bot.copy(position = bot.position + sld1 + sld2)
             )
 
     override fun volatileCoords(bot: Bot): List<Point> =
@@ -270,12 +276,12 @@ data class Fission(val nd: NearCoordDiff, val m: Int) : SimpleCommand {
         }
         return state.copy(
                 energy = state.energy + 24,
-                bots = (state.bots - bot
+                bots = state.bots - bot
                         + bot.copy(seeds = TreeSet(bids[2]!!.map { it.value }))
                         + Bot(
                         id = bot.seeds.first(),
                         position = bot.position + nd,
-                        seeds = TreeSet(bids[1]!!.map { it.value }))).toSortedSet()
+                        seeds = TreeSet(bids[1]!!.map { it.value }))
         )
     }
 
@@ -333,9 +339,9 @@ data class FusionT(val p: FusionP, val s: FusionS) : GroupCommand {
         val (botP, botS) = bots
         return state.copy(
                 energy = state.energy - 24,
-                bots = (state.bots - botS
+                bots = state.bots - botS
                         - botP
-                        + botP.copy(seeds = TreeSet(botP.seeds + botS.id + botP.seeds))).toSortedSet()
+                        + botP.copy(seeds = TreeSet(botP.seeds + botS.id + botP.seeds))
         )
     }
 

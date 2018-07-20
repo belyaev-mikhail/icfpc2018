@@ -1,16 +1,14 @@
 package icfpc2018.bot.state
 
 import org.apache.commons.compress.utils.BitInputStream
-import org.pcollections.HashTreePSet
-import org.pcollections.MapPSet
+import org.organicdesign.fp.collections.PersistentHashSet
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteOrder
-import java.util.*
 
-data class Model(val size: Int, private val data: MapPSet<Long> = HashTreePSet.empty()) {
+data class Model(val size: Int, private val data: PersistentHashSet<Int> = PersistentHashSet.empty()) {
     val sizeCubed by lazy { size * size * size }
 
     operator fun get(point: Point) = get(point.x, point.y, point.z)
@@ -18,20 +16,20 @@ data class Model(val size: Int, private val data: MapPSet<Long> = HashTreePSet.e
     operator fun get(x: Int, y: Int, z: Int): Boolean = data.contains(convertCoordinates(x, y, z))
 
     fun set(x: Int, y: Int, z: Int, value: Boolean = true) = when (value) {
-        true -> copy(data = data + convertCoordinates(x, y, z))
-        false -> copy(data = data - convertCoordinates(x, y, z))
+        true -> copy(data = data.put(convertCoordinates(x, y, z)))
+        false -> copy(data = data.put(convertCoordinates(x, y, z)))
     }
 
     operator fun set(point: Point, value: Boolean) = set(point.x, point.y, point.z, value)
 
     companion object {
-        private inline fun convertCoordinates(x: Int, y: Int, z: Int) = x + 256L * y + 256L * 256L * z
+        private inline fun convertCoordinates(x: Int, y: Int, z: Int) = x + 256 * y + 256 * 256 * z
 
         fun readMDL(bs: InputStream): Model {
             val size = bs.read()
 
             val stream = BitInputStream(bs, ByteOrder.LITTLE_ENDIAN)
-            var data = HashTreePSet.empty<Long>()
+            var data = PersistentHashSet.empty<Int>()
 
             for (ix in 0 until size) {
                 for (iy in 0 until size) {
@@ -40,7 +38,7 @@ data class Model(val size: Int, private val data: MapPSet<Long> = HashTreePSet.e
 
                         check(bit != -1L)
 
-                        if (bit != 0L) data = data + convertCoordinates(ix, iy, iz)
+                        if (bit != 0L) data = data.put(convertCoordinates(ix, iy, iz))
                     }
                 }
             }

@@ -12,8 +12,8 @@ class Trace(val trace: List<Command>) : Solution {
             while (true) {
                 if (currentState.bots.isEmpty()) break
 
-                val currTrace = myTrace.take(currentState.bots.size)
-                myTrace = myTrace.drop(currentState.bots.size)
+                val currTrace = myTrace.subList(0, currentState.bots.size)
+                myTrace = myTrace.subList(currentState.bots.size, myTrace.size)
 
                 system.timeStep(currTrace)
             }
