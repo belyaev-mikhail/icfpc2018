@@ -1,7 +1,6 @@
 package icfpc2018.bot.state
 
 import icfpc2018.bot.state.LinearCoordDiff.Axis.*
-import org.pcollections.TreePVector
 import java.util.*
 import kotlin.math.abs
 import kotlin.math.max
@@ -10,11 +9,11 @@ enum class Harmonics {
     LOW, HIGH
 }
 
-data class Bot(val id: Int, val position: Point, val seeds: SortedSet<Int>)
-
-data class State(val energy: Int, val harmonics: Harmonics, val matrix: Model, val bots: TreePVector<Bot>) {
-    fun setEnergy(energy: Int) = State(energy, harmonics, matrix, bots)
+data class Bot(val id: Int, val position: Point, val seeds: SortedSet<Int>) : Comparable<Bot> {
+    override fun compareTo(other: Bot): Int = id - other.id
 }
+
+data class State(val energy: Int, val harmonics: Harmonics, val matrix: Model, val bots: SortedSet<Bot>)
 
 data class Point(val x: Int, val y: Int, val z: Int) {
     companion object {

@@ -1,25 +1,40 @@
 package icfpc2018
 
+import icfpc2018.bot.commands.Command
 import icfpc2018.bot.state.*
-import icfpc2018.solutions.simple.Simple
-import org.pcollections.TreePVector
+import icfpc2018.solutions.trace.Trace
 import java.io.File
-
-val solution = Simple
+import java.io.FileOutputStream
 
 fun main(args: Array<String>) {
+    for (i in 1..186) {
 
-    val modelFile = File("models/LA001_tgt.mdl").inputStream()
+        val currFileName = "LA%03d".format(i)
 
-    val model = Model.readMDL(modelFile)
+        val targetModelFile = File("models/${currFileName}_tgt.mdl").inputStream()
+        val targetModel = Model.readMDL(targetModelFile)
 
-    val bot = Bot(1, Point(0, 0, 0), (2..20).toSortedSet())
+        val model = Model(targetModel.size)
 
-    val state = State(0, Harmonics.LOW, model, TreePVector.singleton(bot))
+        val bot = Bot(1, Point(0, 0, 0), (2..20).toSortedSet())
 
-    val system = System(state)
+        val state = State(0, Harmonics.LOW, model, sortedSetOf(bot))
 
-    solution.apply(system)
+        val system = System(state)
 
-    println(system.commandTrace)
+        val traceFile = File("traces/$currFileName.nbt").inputStream()
+        val commands: MutableList<Command> = mutableListOf()
+        while (traceFile.available() != 0) {
+            commands += Command.read(traceFile)
+        }
+
+        val solution = Trace(commands)
+
+        solution.apply(system)
+
+        val ofile = FileOutputStream(File("traces/$currFileName.my.nbt"))
+        system.commandTrace.forEach { it.write(ofile) }
+
+        println(system.currentState.matrix == targetModel)
+    }
 }

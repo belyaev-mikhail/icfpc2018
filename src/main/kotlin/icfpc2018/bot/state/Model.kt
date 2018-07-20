@@ -11,11 +11,13 @@ import java.nio.ByteOrder
 import java.util.*
 
 data class Model(val size: Int, private val data: MapPSet<Long> = HashTreePSet.empty()) {
+    val sizeCubed by lazy { size * size * size }
+
     operator fun get(point: Point) = get(point.x, point.y, point.z)
 
     operator fun get(x: Int, y: Int, z: Int): Boolean = data.contains(convertCoordinates(x, y, z))
 
-    fun set(x: Int, y: Int, z: Int, value: Boolean = true) = when(value) {
+    fun set(x: Int, y: Int, z: Int, value: Boolean = true) = when (value) {
         true -> copy(data = data + convertCoordinates(x, y, z))
         false -> copy(data = data - convertCoordinates(x, y, z))
     }
@@ -31,14 +33,14 @@ data class Model(val size: Int, private val data: MapPSet<Long> = HashTreePSet.e
             val stream = BitInputStream(bs, ByteOrder.LITTLE_ENDIAN)
             var data = HashTreePSet.empty<Long>()
 
-            for(ix in 0 until size) {
-                for(iy in 0 until size) {
-                    for(iz in 0 until size) {
+            for (ix in 0 until size) {
+                for (iy in 0 until size) {
+                    for (iz in 0 until size) {
                         val bit = stream.readBits(1)
 
                         check(bit != -1L)
 
-                        if(bit != 0L) data = data + convertCoordinates(ix, iy, iz)
+                        if (bit != 0L) data = data + convertCoordinates(ix, iy, iz)
                     }
                 }
             }
@@ -73,12 +75,12 @@ fun main(args: Array<String>) {
 
     println(model)
 
-    for(y in 0..model.size) {
+    for (y in 0..model.size) {
         println("-".repeat(model.size * 2))
 
-        for(x in 0..model.size) {
-            for(z in 0..model.size) {
-                if(model[x,y,z]) {
+        for (x in 0..model.size) {
+            for (z in 0..model.size) {
+                if (model[x, y, z]) {
                     print("X ")
                 } else {
                     print("  ")
@@ -89,9 +91,6 @@ fun main(args: Array<String>) {
 
         println("-".repeat(model.size * 2))
     }
-
     model.writeMDL(FileOutputStream(File("testModel.mdl")))
 
 }
-
-

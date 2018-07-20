@@ -1,29 +1,20 @@
 package icfpc2018.bot.commands
 
 import icfpc2018.bot.state.*
+import icfpc2018.bot.state.Harmonics.HIGH
+import icfpc2018.bot.state.Harmonics.LOW
 import org.apache.commons.compress.utils.BitInputStream
-import java.io.File
-import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteOrder
-import icfpc2018.bot.state.Harmonics.HIGH
-import icfpc2018.bot.state.Harmonics.LOW
-import org.pcollections.TreePVector
 import java.util.*
 
 fun Int.toBinary(size: Int) = ("0".repeat(32) + toString(2)).takeLast(size)
 fun Long.toBinary(size: Int = 8) = ("0".repeat(64) + toString(2)).takeLast(size)
 
 interface Command {
-    fun apply(bot: Bot, state: State): State = state
-
-    fun volatileCoords(bot: Bot) = listOf(bot.position)
-
-    fun check(bot: Bot, state: State) = true
-
     fun write(stream: OutputStream) {
-        when(this) {
+        when (this) {
             is Halt -> stream.write(0b11111111)
             is Wait -> stream.write(0b11111110)
             is Flip -> stream.write(0b11111101)
@@ -85,7 +76,7 @@ interface Command {
 
             val firstByte = bits.readBits(8)
 
-            return when(firstByte) {
+            return when (firstByte) {
                 0b11111111L -> Halt
                 0b11111110L -> Wait
                 0b11111101L -> Flip
@@ -96,7 +87,7 @@ interface Command {
                             val llda = firstByteEnc.substring(2..3).toInt(2)
                             val secondByteEnc = bits.readBits(8).toBinary()
                             val lldi = secondByteEnc.substring(3..7).toInt(2)
-                            val ldiff = when(llda) {
+                            val ldiff = when (llda) {
                                 1 -> LongCoordDiff(dx = lldi - 15)
                                 2 -> LongCoordDiff(dy = lldi - 15)
                                 3 -> LongCoordDiff(dz = lldi - 15)
@@ -112,17 +103,17 @@ interface Command {
                             val sld2i = secondByteEnc.substring(0..3).toInt(2)
                             val sld1i = secondByteEnc.substring(4..7).toInt(2)
 
-                            val sdiff1 = when(sld1a) {
+                            val sdiff1 = when (sld1a) {
                                 1 -> ShortCoordDiff(dx = sld1i - 5)
                                 2 -> ShortCoordDiff(dy = sld1i - 5)
                                 3 -> ShortCoordDiff(dz = sld1i - 5)
-                                else ->  throw IllegalStateException()
+                                else -> throw IllegalStateException()
                             }
-                            val sdiff2 = when(sld2a) {
+                            val sdiff2 = when (sld2a) {
                                 1 -> ShortCoordDiff(dx = sld2i - 5)
                                 2 -> ShortCoordDiff(dy = sld2i - 5)
                                 3 -> ShortCoordDiff(dz = sld2i - 5)
-                                else ->  throw IllegalStateException()
+                                else -> throw IllegalStateException()
                             }
                             LMove(sdiff1, sdiff2)
                         }
@@ -171,35 +162,53 @@ interface Command {
     }
 }
 
-fun main(args: Array<String>) {
-    val traceFile = File("traces/LA001.nbt").inputStream()
-    val commands: MutableList<Command> = mutableListOf()
-    while(traceFile.available() != 0) {
-        commands += Command.read(traceFile)
-    }
-    println(commands.joinToString("\n"))
+interface SimpleCommand : Command {
+    fun apply(bot: Bot, state: State): State = state
 
-    val ofile = FileOutputStream(File("traceText.nbt"))
-    commands.forEach { it.write(ofile) }
+    fun volatileCoords(bot: Bot) = listOf(bot.position)
+
+    fun check(bot: Bot, state: State) = true
 }
 
-object Halt : Command {
+interface GroupCommand {
+    fun apply(bots: List<Bot>, state: State): State = state
+
+    fun volatileCoords(bots: List<Bot>) = bots.map { it.position }
+
+    fun check(bots: List<Bot>, state: State) = true
+
+    val innerCommands: List<SimpleCommand>
+}
+
+object Halt : SimpleCommand {
+    override fun toString(): String {
+        return "Halt"
+    }
+
     override fun apply(bot: Bot, state: State): State =
-            state.copy(bots = TreePVector.empty())
+            state.copy(bots = sortedSetOf())
 
     override fun check(bot: Bot, state: State): Boolean {
         return when {
             bot.position != Point.ZERO -> false
-            state.bots != listOf(bot) -> false
+            state.bots != sortedSetOf(bot) -> false
             state.harmonics != LOW -> false
             else -> true
         }
     }
 }
 
-object Wait : Command
+object Wait : SimpleCommand {
+    override fun toString(): String {
+        return "Wait"
+    }
+}
 
-object Flip : Command {
+object Flip : SimpleCommand {
+    override fun toString(): String {
+        return "Flip"
+    }
+
     override fun apply(bot: Bot, state: State): State {
         return state.copy(harmonics = when (state.harmonics) {
             LOW -> HIGH
@@ -208,11 +217,12 @@ object Flip : Command {
     }
 }
 
-data class SMove(val lld: LongCoordDiff) : Command {
+data class SMove(val lld: LongCoordDiff) : SimpleCommand {
     override fun apply(bot: Bot, state: State) =
             state.copy(
                     energy = state.energy + 2 * lld.mlen,
-                    bots = state.bots - bot + bot.copy(position = bot.position + lld)
+                    bots = (state.bots - bot
+                            + bot.copy(position = bot.position + lld)).toSortedSet()
             )
 
     override fun volatileCoords(bot: Bot): List<Point> =
@@ -228,12 +238,12 @@ data class SMove(val lld: LongCoordDiff) : Command {
     }
 }
 
-data class LMove(val sld1: ShortCoordDiff, val sld2: ShortCoordDiff) : Command {
+data class LMove(val sld1: ShortCoordDiff, val sld2: ShortCoordDiff) : SimpleCommand {
     override fun apply(bot: Bot, state: State) =
             state.copy(
                     energy = state.energy + 2 * (sld1.mlen + 2 + sld2.mlen),
-                    bots = state.bots - bot
-                            + bot.copy(position = bot.position + sld1 + sld2)
+                    bots = (state.bots - bot
+                            + bot.copy(position = bot.position + sld1 + sld2)).toSortedSet()
             )
 
     override fun volatileCoords(bot: Bot): List<Point> =
@@ -249,7 +259,7 @@ data class LMove(val sld1: ShortCoordDiff, val sld2: ShortCoordDiff) : Command {
     }
 }
 
-data class Fission(val nd: NearCoordDiff, val m: Int) : Command {
+data class Fission(val nd: NearCoordDiff, val m: Int) : SimpleCommand {
     override fun apply(bot: Bot, state: State): State {
         val bids = bot.seeds.withIndex().groupBy { (idx, _) ->
             when (idx) {
@@ -260,13 +270,12 @@ data class Fission(val nd: NearCoordDiff, val m: Int) : Command {
         }
         return state.copy(
                 energy = state.energy + 24,
-                bots = state.bots
-                        - bot
+                bots = (state.bots - bot
                         + bot.copy(seeds = TreeSet(bids[2]!!.map { it.value }))
                         + Bot(
                         id = bot.seeds.first(),
                         position = bot.position + nd,
-                        seeds = TreeSet(bids[1]!!.map { it.value }))
+                        seeds = TreeSet(bids[1]!!.map { it.value }))).toSortedSet()
         )
     }
 
@@ -283,14 +292,57 @@ data class Fission(val nd: NearCoordDiff, val m: Int) : Command {
     }
 }
 
-data class Fill(val nd: NearCoordDiff) : Command {
-    override fun apply(bot: Bot, state: State) = TODO()
+data class Fill(val nd: NearCoordDiff) : SimpleCommand {
+    override fun apply(bot: Bot, state: State): State {
+        val newPos = bot.position + nd
+        val (newEnergy, shouldUpdate) = if (state.matrix[newPos]) {
+            state.energy + 6 to false
+        } else {
+            state.energy + 12 to true
+        }
+        return state.copy(
+                energy = newEnergy,
+                matrix = if (shouldUpdate) state.matrix.set(newPos, true) else state.matrix
+        )
+    }
+
+    override fun volatileCoords(bot: Bot): List<Point> =
+            listOf(bot.position, bot.position + nd)
+
+    override fun check(bot: Bot, state: State): Boolean {
+        val newPos = bot.position + nd
+        // TODO: validate new pos
+        return true
+    }
 }
 
-data class FusionP(val nd: NearCoordDiff) : Command {
-    override fun apply(bot: Bot, state: State) = TODO()
+data class FusionP(val nd: NearCoordDiff) : SimpleCommand {
+    override fun apply(bot: Bot, state: State): State = TODO()
 }
 
-data class FusionS(val nd: NearCoordDiff) : Command {
-    override fun apply(bot: Bot, state: State) = TODO()
+data class FusionS(val nd: NearCoordDiff) : SimpleCommand {
+    override fun apply(bot: Bot, state: State): State = TODO()
+}
+
+data class FusionT(val p: FusionP, val s: FusionS) : GroupCommand {
+    override val innerCommands: List<SimpleCommand> by lazy {
+        listOf(p, s)
+    }
+
+    override fun apply(bots: List<Bot>, state: State): State {
+        val (botP, botS) = bots
+        return state.copy(
+                energy = state.energy - 24,
+                bots = (state.bots - botS
+                        - botP
+                        + botP.copy(seeds = TreeSet(botP.seeds + botS.id + botP.seeds))).toSortedSet()
+        )
+    }
+
+    override fun check(bots: List<Bot>, state: State): Boolean {
+        if (bots.size != 2) return false
+        val (botP, botS) = bots
+        if (botP.position + p.nd != botS.position + s.nd) return false
+        return true
+    }
 }
