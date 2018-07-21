@@ -12,8 +12,8 @@ import java.io.StringReader
 
 fun main(args: Array<String>) {
     val arguments = Arguments(args)
-    val targetModelName = arguments.getValue("model") ?: throw IllegalArgumentException()
     val solutionName = arguments.getValue("solution") ?: throw IllegalArgumentException()
+    val isSubmit = arguments.isSubmit()
 
     val resultsFile = File("results/results.json")
     val resultReader = when {
@@ -22,50 +22,62 @@ fun main(args: Array<String>) {
     }
     val results = Results.fromJson(resultReader)
 
-    val targetModelFile = File("models/${targetModelName}_tgt.mdl").inputStream()
-    val targetModel = Model.readMDL(targetModelFile)
+    val targetModels = arguments.getModels()
 
-    val model = Model(targetModel.size)
-    val bot = Bot(1, Point(0, 0, 0), (2..20).toSortedSet())
-    val state = State(0, Harmonics.LOW, model, persistentTreeSetOf(bot))
+    for (targetModelName in targetModels) {
+        val targetModelFile = File("models/${targetModelName}_tgt.mdl").inputStream()
+        val targetModel = Model.readMDL(targetModelFile)
 
-    val system = System(state)
-    val solution = when (solutionName) {
-        "trace" -> {
-            val traceFile = File("traces/$targetModelName.nbt").inputStream()
-            val commands: MutableList<Command> = mutableListOf()
-            while (traceFile.available() != 0) {
-                commands += Command.read(traceFile)
+        val model = Model(targetModel.size)
+        val bot = Bot(1, Point(0, 0, 0), (2..20).toSortedSet())
+        val state = State(0, Harmonics.LOW, model, persistentTreeSetOf(bot))
+
+        val system = System(state)
+        val solution = when (solutionName) {
+            "trace" -> {
+                val traceFile = File("traces/$targetModelName.nbt").inputStream()
+                val commands: MutableList<Command> = mutableListOf()
+                while (traceFile.available() != 0) {
+                    commands += Command.read(traceFile)
+                }
+                Trace(commands, system)
             }
-            Trace(commands, system)
+            "sections" -> Sections(targetModel, system)
+            "slices" -> Slices(targetModel, system)
+            else -> throw IllegalArgumentException()
         }
-        "sections" -> Sections(targetModel, system)
-        "slices" -> Slices(targetModel, system)
-        else -> throw IllegalArgumentException()
+        log.info(solution::class.java.name)
+
+        solution.solve()
+
+        log.info { "Energy: " + system.currentState.energy }
+
+        val success = system.currentState.matrix == targetModel
+
+
+        log.info(if (success) "Success" else "Fail")
+
+        if (success) {
+            val resultTraceFile = "results/${targetModelName}_$solutionName.nbt"
+
+            results.addNewResult(targetModelName, solutionName, system.currentState.energy, resultTraceFile)
+
+            val ofile = FileOutputStream(File(resultTraceFile).apply { this.parentFile.mkdirs() })
+            system.commandTrace.forEach { it.write(ofile) }
+
+            if (isSubmit) {
+                val submitFile = "submit/${targetModelName}.nbt"
+                val submitstream = FileOutputStream(File(submitFile).apply { this.parentFile.mkdirs() })
+                system.commandTrace.forEach { it.write(submitstream) }
+            }
+        }
     }
-    log.info(solution::class.java.name)
 
-    solution.solve()
+    val writer = resultsFile.writer()
+    writer.write(results.toJson())
+    writer.flush()
 
-    log.info { "Energy: " + system.currentState.energy }
-
-    val success = system.currentState.matrix == targetModel
-
-
-    log.info(if (success) "Success" else "Fail")
-
-    system.currentState.matrix.writeMDL(FileOutputStream(File("testModel.mdl")))
-
-    if (true) {
-        val resultTraceFie = "results/${targetModelName}_$solutionName.nbt"
-
-        results.addNewResult(targetModelName, solutionName, system.currentState.energy, resultTraceFie)
-
-        val ofile = FileOutputStream(File(resultTraceFie).apply { this.parentFile.mkdirs() })
-        system.commandTrace.forEach { it.write(ofile) }
-
-        val writer = resultsFile.writer()
-        writer.write(results.toJson())
-        writer.flush()
+    if (isSubmit) {
+        ZipWriter().createZip("submit/")
     }
 }

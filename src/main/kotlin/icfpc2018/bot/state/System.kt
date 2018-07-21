@@ -8,7 +8,7 @@ enum class Mode {
 
 class ExecutionError : Exception()
 
-class CommandCheckError : Exception()
+class CommandCheckError(msg: String) : Exception(msg)
 
 class GroupCommandError : Exception()
 
@@ -45,7 +45,9 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
                     ungroupedCommands.add(bot to cmd)
                 }
                 is SimpleCommand -> {
-                    if (Mode.DEBUG == mode) if (!cmd.check(bot, execState)) throw CommandCheckError()
+                    if (Mode.DEBUG == mode) if (!cmd.check(bot, execState)) throw CommandCheckError(
+                            "For $cmd of $bot with $execState"
+                    )
                     execState = cmd.apply(bot, execState)
                 }
             }
@@ -75,7 +77,9 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
         if (groupedCommands.size != fusionPrimary.size) throw GroupCommandError()
 
         for ((bots, cmd) in groupedCommands) {
-            if (Mode.DEBUG == mode) if (!cmd.check(bots, execState)) throw CommandCheckError()
+            if (Mode.DEBUG == mode) if (!cmd.check(bots, execState)) throw CommandCheckError(
+                    "For $cmd of $bots with $execState"
+            )
             execState = cmd.apply(bots, execState)
         }
 

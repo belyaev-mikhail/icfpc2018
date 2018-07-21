@@ -1,7 +1,6 @@
 package icfpc2018.bot.state
 
 import icfpc2018.bot.state.LinearCoordDiff.Axis.*
-import icfpc2018.solutions.sections.indices
 import org.organicdesign.fp.collections.PersistentTreeSet
 import java.util.*
 import kotlin.math.abs
@@ -21,7 +20,11 @@ data class Point(val x: Int, val y: Int, val z: Int) {
     companion object {
         val ZERO = Point(0, 0, 0)
 
+        val ZERO_TO_ONE = listOf(0, 1)
+
         val MINUS_ONE_TO_ONE = listOf(-1, 0, 1)
+
+        val MINUS_ONE_AND_ONE = listOf(-1, 1)
     }
 }
 
@@ -59,10 +62,18 @@ open class CoordDiff(val dx: Int, val dy: Int, val dz: Int) {
 
 operator fun Point.plus(cd: CoordDiff) = Point(x + cd.dx, y + cd.dy, z + cd.dz)
 
-fun Point.options(dx: List<Int>, dy: List<Int>, dz: List<Int>): Set<Point> =
-        (dx.map { copy(x = x + it, y = y, z = z) } +
-                dy.map { copy(x = x, y = y + it, z = z) } +
-                dz.map { copy(x = x, y = y, z = z + it) }).toSet()
+fun Point.options(dx: List<Int>, dy: List<Int>, dz: List<Int>): Set<Point> {
+    val res = mutableSetOf<Point>()
+    for (xx in dx) {
+        for (yy in dy) {
+            for (zz in dz) {
+                res.add(Point(x + xx, y + yy, z + zz))
+            }
+        }
+    }
+    res.remove(this)
+    return res
+}
 
 fun Set<Point>.inRange(model: Model) =
         filterTo(mutableSetOf()) {
@@ -108,6 +119,16 @@ class LongCoordDiff(dx: Int = 0, dy: Int = 0, dz: Int = 0) : LinearCoordDiff(dx,
     init {
         assert(mlen <= 15)
     }
+
+    companion object {
+        fun fromAxis(axis: Axis, length: Int): LongCoordDiff {
+            return when (axis) {
+                Axis.X -> LongCoordDiff(length, 0, 0)
+                Axis.Y -> LongCoordDiff(0, length, 0)
+                Axis.Z -> LongCoordDiff(0, 0, length)
+            }
+        }
+    }
 }
 
 class ShortCoordDiff(dx: Int = 0, dy: Int = 0, dz: Int = 0) : LinearCoordDiff(dx, dy, dz) {
@@ -119,5 +140,10 @@ class ShortCoordDiff(dx: Int = 0, dy: Int = 0, dz: Int = 0) : LinearCoordDiff(dx
 class NearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
     init {
         assert(mlen in 1..2 && clen == 1)
+    }
+
+    companion object {
+        fun fromPoints(origin: Point, target: Point) =
+                NearCoordDiff(target.x - origin.x, target.y - origin.y, target.z - origin.z)
     }
 }
