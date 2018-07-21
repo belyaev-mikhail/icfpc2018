@@ -4,7 +4,9 @@ import icfpc2018.bot.commands.Command
 import icfpc2018.bot.commands.Flip
 import icfpc2018.bot.state.*
 import icfpc2018.bot.util.persistentTreeSetOf
+import icfpc2018.solutions.getSolutionByName
 import icfpc2018.solutions.groundedSlices.GroundedSlices
+import icfpc2018.solutions.portfolio.Portfolio
 import icfpc2018.solutions.sections.Sections
 import icfpc2018.solutions.slices.Slices
 import icfpc2018.solutions.trace.Trace
@@ -28,6 +30,7 @@ fun main(args: Array<String>) {
     val targetModels = arguments.getModels()
 
     for (targetModelName in targetModels) {
+        log.info("Running with model $targetModelName")
         val targetModelFile = File("models/${targetModelName}_tgt.mdl").inputStream()
         val targetModel = Model.readMDL(targetModelFile)
 
@@ -45,12 +48,7 @@ fun main(args: Array<String>) {
                 }
                 Trace(commands, system)
             }
-            "sections" -> Sections(targetModel, system)
-            "slices" -> Slices(targetModel, system)
-            "grounded_slices" -> GroundedSlices(targetModel, system)
-            "portfolio" -> Portfolio(targetModel, system)
-            "triple_slices" -> TripleSlices(targetModel, system)
-            else -> throw IllegalArgumentException()
+            else -> getSolutionByName(solutionName, targetModel, system)
         }
         log.info(solution::class.java.name)
 
@@ -62,9 +60,6 @@ fun main(args: Array<String>) {
 
 
         log.info(if (success) "Success" else "Fail")
-
-        log.info(system.commandTrace.size.toString())
-        log.info(system.commandTrace.withIndex().filter { it.value === Flip }.toString())
 
         if (success) {
             val resultTraceFile = "results/${targetModelName}_$solutionName.nbt"
