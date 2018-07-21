@@ -11,9 +11,9 @@ import java.util.*
 
 
 data class Box(val left: Int, val right: Int, val top: Int, val bottom: Int, val middle: Int, val back: Int) {
-    val width = right - left
-    val height = top - bottom
-    val depth = back - middle
+    val width = right - left + 1
+    val height = top - bottom + 1
+    val depth = back - middle + 1
 }
 
 data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean> = PersistentHashMap.empty(),

@@ -30,6 +30,7 @@ fun main(args: Array<String>) {
     for (targetModelName in targetModels) {
         val targetModelFile = File("models/${targetModelName}_tgt.mdl").inputStream()
         val targetModel = Model.readMDL(targetModelFile)
+        println(targetModel.box)
 
         val model = Model(targetModel.size)
         val bot = Bot(1, Point(0, 0, 0), (2..20).toSortedSet())
@@ -63,7 +64,7 @@ fun main(args: Array<String>) {
 
         log.info(if (success) "Success" else "Fail")
 
-        if (success) {
+        if (true) {
             val resultTraceFile = "results/${targetModelName}_$solutionName.nbt"
 
             results.addNewResult(targetModelName, solutionName, system.currentState.energy, resultTraceFile)

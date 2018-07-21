@@ -3,6 +3,7 @@ package icfpc2018.solutions.groundedBoundedSlices
 import icfpc2018.bot.commands.*
 import icfpc2018.bot.state.*
 import icfpc2018.solutions.Solution
+import kotlin.math.abs
 
 data class Rectangle(val left: Int, val right: Int, val top: Int, val bottom: Int)
 
@@ -48,18 +49,40 @@ class GroundedBoundedSlices(val target: Model, val system: System) : Solution {
         shift(target.box.left)
         val z = target.box.middle
         val y = target.box.bottom
-        val commands1 = ArrayList<Command>()
-        for (i in 0 until z / 15)
-            commands1.add(SMove(LongCoordDiff(dz = 15)))
-        if (z % 15 != 0)
-            commands1.add(SMove(LongCoordDiff(dz = z % 15)))
-        val commands2 = ArrayList<Command>()
-        for (i in 0 until y / 15)
-            commands2.add(SMove(LongCoordDiff(dy = 15)))
-        if (y % 15 != 0)
-            commands2.add(SMove(LongCoordDiff(dy = y % 15)))
-        system.timeStep(commands1)
-        system.timeStep(commands2)
+        val trace1 = ArrayList<List<Command>>()
+        for (i in 0 until y / 15) {
+            val commands = ArrayList<Command>()
+            for (k in 0 until system.numBots) {
+                commands.add(SMove(LongCoordDiff(dy = 15)))
+            }
+            trace1.add(commands)
+        }
+        if (y % 15 != 0) {
+            val commands = ArrayList<Command>()
+            for (k in 0 until system.numBots) {
+                commands.add(SMove(LongCoordDiff(dy = (y % 15))))
+            }
+            trace1.add(commands)
+        }
+        val trace2 = ArrayList<List<Command>>()
+        for (i in 0 until z / 15) {
+            val commands = ArrayList<Command>()
+            for (k in 0 until system.numBots) {
+                commands.add(SMove(LongCoordDiff(dz = 15)))
+            }
+            trace2.add(commands)
+        }
+        if (z % 15 != 0) {
+            val commands = ArrayList<Command>()
+            for (k in 0 until system.numBots) {
+                commands.add(SMove(LongCoordDiff(dz = (z % 15))))
+            }
+            trace2.add(commands)
+        }
+        for (commands in trace1)
+            system.timeStep(commands)
+        for (commands in trace2)
+            system.timeStep(commands)
     }
 
     private fun column() {
@@ -161,8 +184,18 @@ class GroundedBoundedSlices(val target: Model, val system: System) : Solution {
         }
     }
 
-    private fun shift(value: Int) {
-        TODO()
+    private fun shift(by: Int) {
+        var step = by / 15
+        val dir = step > 0
+        step = abs(step)
+        while (step != 0) {
+            atomicShift(if (dir) 15 else -15)
+            if (dir) step-- else step++
+        }
+        val rest = by % 15
+        if (rest != 0) {
+            atomicShift(rest)
+        }
     }
 
     private fun atomicShift(size: Int) {
