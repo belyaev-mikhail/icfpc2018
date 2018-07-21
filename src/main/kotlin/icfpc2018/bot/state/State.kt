@@ -65,12 +65,12 @@ fun Point.options(dx: List<Int>, dy: List<Int>, dz: List<Int>): Set<Point> =
                 dz.map { copy(x = x, y = y, z = z + it) }).toSet()
 
 fun Set<Point>.inRange(model: Model) =
-        filter {
+        filterTo(mutableSetOf()) {
             val indices = 0 until model.size
             it.x in indices &&
                     it.y in indices &&
                     it.z in indices
-        }.toSet()
+        }
 
 open class LinearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
     enum class Axis { X, Y, Z }
