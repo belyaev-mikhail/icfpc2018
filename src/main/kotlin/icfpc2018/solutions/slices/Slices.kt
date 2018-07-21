@@ -6,9 +6,6 @@ import icfpc2018.solutions.Solution
 import icfpc2018.solutions.initialLinearFission
 
 
-val Model.indices: IntRange
-    get() = 0 until size
-
 class Slices(val target: Model, val system: System) : Solution {
 
     override fun solve() {

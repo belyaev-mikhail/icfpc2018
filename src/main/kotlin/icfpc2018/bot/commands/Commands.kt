@@ -308,7 +308,7 @@ data class Fill(val nd: NearCoordDiff) : SimpleCommand {
         }
         return state.copy(
                 energy = newEnergy,
-                matrix = if (shouldUpdate) state.matrix.set(newPos, true) else state.matrix
+                matrix = if (shouldUpdate) state.matrix.set(newPos) else state.matrix
         )
     }
 

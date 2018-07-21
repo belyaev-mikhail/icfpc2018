@@ -1,28 +1,48 @@
 package icfpc2018.bot.state
 
 import org.apache.commons.compress.utils.BitInputStream
-import org.organicdesign.fp.collections.PersistentHashSet
+import org.organicdesign.fp.collections.PersistentHashMap
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteOrder
 
-data class Model(val size: Int, private val data: PersistentHashSet<Int> = PersistentHashSet.empty()) {
-    val height by lazy { data.map { deconvertCoordinates(it).y }.max()!! }
-
+data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean> = PersistentHashMap.empty()) {
     val sizeCubed by lazy { size * size * size }
+
+    val height by lazy { data.keys.map { deconvertCoordinates(it).y }.max()!! }
 
     operator fun get(point: Point) = get(point.x, point.y, point.z)
 
-    operator fun get(x: Int, y: Int, z: Int): Boolean = data.contains(convertCoordinates(x, y, z))
+    operator fun get(x: Int, y: Int, z: Int): Boolean = data.containsKey(convertCoordinates(x, y, z))
 
-    fun set(x: Int, y: Int, z: Int, value: Boolean = true) = when (value) {
-        true -> copy(data = data.put(convertCoordinates(x, y, z)))
-        false -> copy(data = data.put(convertCoordinates(x, y, z)))
+    fun set(x: Int, y: Int, z: Int) = set(Point(x, y, z))
+
+    fun set(point: Point) =
+            copy(data = data.assoc(point.index, point.isTriviallyGrounded)).propagateGroundness(point)
+
+    fun isGrounded(x: Int, y: Int, z: Int) = data[convertCoordinates(x, y, z)] == true
+    @JvmName("pleasePleasePleaseGoToHellWithYourNameAmbiguity")
+    fun isGrounded(point: Point) = data[point.index] == true
+
+    private val Point.isTriviallyGrounded inline get() = y == 0
+    private val Point.index inline get() = convertCoordinates(x,y,z)
+    private val Point.inBounds inline get() = x in 0 until size && y in 0 until size && z in 0 until size
+
+    private fun propagateGroundness(p: Point, mutableData: PersistentHashMap.MutableHashMap<Int, Boolean> = data.mutable()): Model {
+        val neighbors = p.options(listOf(-1, 1), listOf(-1, 1), listOf(-1, 1)).filter { it.inBounds }
+        val grounded = p.isTriviallyGrounded || mutableData[p.index] == true || neighbors.any { mutableData[it.index] == true }
+        if(!grounded) return copy(data = mutableData.immutable())
+
+        mutableData[p.index] = true
+        val notGroundedNeighbors = neighbors.filterNot { it.isTriviallyGrounded || mutableData[it.index] == true }
+        for(neighbor in notGroundedNeighbors) {
+            mutableData[neighbor.index] = true
+            propagateGroundness(neighbor, mutableData)
+        }
+        return copy(data = mutableData.immutable())
     }
-
-    operator fun set(point: Point, value: Boolean) = set(point.x, point.y, point.z, value)
 
     companion object {
         private inline fun deconvertCoordinates(coord: Int) =
@@ -34,7 +54,7 @@ data class Model(val size: Int, private val data: PersistentHashSet<Int> = Persi
             val size = bs.read()
 
             val stream = BitInputStream(bs, ByteOrder.LITTLE_ENDIAN)
-            var data = PersistentHashSet.empty<Int>()
+            var data = PersistentHashMap.empty<Int, Boolean>()
 
             for (ix in 0 until size) {
                 for (iy in 0 until size) {
@@ -43,7 +63,7 @@ data class Model(val size: Int, private val data: PersistentHashSet<Int> = Persi
 
                         check(bit != -1L)
 
-                        if (bit != 0L) data = data.put(convertCoordinates(ix, iy, iz))
+                        if (bit != 0L) data = data.assoc(convertCoordinates(ix, iy, iz), true) // all models are grounded by design
                     }
                 }
             }
@@ -56,18 +76,18 @@ data class Model(val size: Int, private val data: PersistentHashSet<Int> = Persi
 
         os.write(size)
 
-        for (ix in 0 until size) {
-            for (iy in 0 until size) {
-                for (iz in 0 until size) {
-                    byte += (if (get(ix, iy, iz)) "1" else "0")
-                    if (byte.length == 8) {
+        for(ix in 0 until size) {
+            for(iy in 0 until size) {
+                for(iz in 0 until size) {
+                    byte += (if(get(ix, iy, iz)) "1" else "0")
+                    if(byte.length == 8) {
                         os.write(byte.reversed().toInt(2))
                         byte = ""
                     }
                 }
             }
         }
-        if (byte.isNotEmpty()) os.write(byte.reversed().toInt(2))
+        if(byte.isNotEmpty()) os.write(byte.reversed().toInt(2))
     }
 }
 
