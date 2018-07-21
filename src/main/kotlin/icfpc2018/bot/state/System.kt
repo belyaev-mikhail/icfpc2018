@@ -19,15 +19,15 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
     val numBots: Int
         get() = currentState.bots.size
 
-    var commandTrace = ArrayList<Command>()
+    var commandTrace = mutableListOf<Command>()
 
-    var stateTrace = arrayListOf(currentState)
+    var stateTrace = mutableListOf(currentState)
 
     fun timeStamp() = TimeStamp(commandTrace.size, stateTrace.size)
 
     fun rollBackTo(timeStamp: TimeStamp) {
-        commandTrace.subList(0, timeStamp.commandStamp)
-        stateTrace.subList(0, timeStamp.stateStamp)
+        commandTrace = commandTrace.subList(0, timeStamp.commandStamp)
+        stateTrace = stateTrace.subList(0, timeStamp.stateStamp)
         currentState = stateTrace.last()
     }
 

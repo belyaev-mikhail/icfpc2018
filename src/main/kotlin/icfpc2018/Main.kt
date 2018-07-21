@@ -1,6 +1,7 @@
 package icfpc2018
 
 import icfpc2018.bot.commands.Command
+import icfpc2018.bot.commands.Flip
 import icfpc2018.bot.state.*
 import icfpc2018.bot.util.persistentTreeSetOf
 import icfpc2018.solutions.groundedSlices.GroundedSlices
@@ -58,6 +59,9 @@ fun main(args: Array<String>) {
 
 
         log.info(if (success) "Success" else "Fail")
+
+        log.info(system.commandTrace.size.toString())
+        log.info(system.commandTrace.withIndex().filter { it.value === Flip }.toString())
 
         if (success) {
             val resultTraceFile = "results/${targetModelName}_$solutionName.nbt"
