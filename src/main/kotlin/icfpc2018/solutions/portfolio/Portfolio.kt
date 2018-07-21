@@ -6,7 +6,7 @@ import icfpc2018.solutions.Solution
 import icfpc2018.solutions.getSolutionByName
 
 class Portfolio(val target: Model, val system: System) : Solution {
-    val solutionNames = listOf("slices", "grounded_slices")
+    val solutionNames = listOf("slices", "grounded_slices", "grounded_bounded_slices")
 
     val model = Model(target.size)
     val bot = Bot(1, Point(0, 0, 0), (2..20).toSortedSet())
