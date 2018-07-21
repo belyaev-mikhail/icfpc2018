@@ -77,6 +77,24 @@ interface Command {
                 val nd = (nd.dx + 1) * 9 + (nd.dy + 1) * 3 + nd.dz + 1
                 stream.write("${nd.toBinary(5)}011".toInt(2))
             }
+            is Void -> {
+                val nd = (nd.dx + 1) * 9 + (nd.dy + 1) * 3 + nd.dz + 1
+                stream.write("${nd.toBinary(5)}010".toInt(2))
+            }
+            is GFill -> {
+                val nd = (nd.dx + 1) * 9 + (nd.dy + 1) * 3 + nd.dz + 1
+                stream.write("${nd.toBinary(5)}001".toInt(2))
+                stream.write(fd.dx)
+                stream.write(fd.dy)
+                stream.write(fd.dz)
+            }
+            is GVoid -> {
+                val nd = (nd.dx + 1) * 9 + (nd.dy + 1) * 3 + nd.dz + 1
+                stream.write("${nd.toBinary(5)}000".toInt(2))
+                stream.write(fd.dx)
+                stream.write(fd.dy)
+                stream.write(fd.dz)
+            }
         }
     }
 
@@ -92,18 +110,6 @@ interface Command {
                 0b11111101L -> Flip
                 else -> {
                     when {
-                        firstByte.endsWithBits(0b0100) -> {
-                            val llda = firstByte.subBits(2..3)
-                            val secondByteEnc = bits.readBits(8)
-                            val lldi = secondByteEnc.subBits(3..7)
-                            val ldiff = when (llda) {
-                                1 -> LongCoordDiff(dx = lldi - 15)
-                                2 -> LongCoordDiff(dy = lldi - 15)
-                                3 -> LongCoordDiff(dz = lldi - 15)
-                                else -> throw IllegalStateException()
-                            }
-                            SMove(ldiff)
-                        }
                         firstByte.endsWithBits(0b1100) -> {
                             val sld2a = firstByte.subBits(0..1)
                             val sld1a = firstByte.subBits(2..3)
@@ -124,6 +130,18 @@ interface Command {
                                 else -> throw IllegalStateException()
                             }
                             LMove(sdiff1, sdiff2)
+                        }
+                        firstByte.endsWithBits(0b0100) -> {
+                            val llda = firstByte.subBits(2..3)
+                            val secondByteEnc = bits.readBits(8)
+                            val lldi = secondByteEnc.subBits(3..7)
+                            val ldiff = when (llda) {
+                                1 -> LongCoordDiff(dx = lldi - 15)
+                                2 -> LongCoordDiff(dy = lldi - 15)
+                                3 -> LongCoordDiff(dz = lldi - 15)
+                                else -> throw IllegalStateException()
+                            }
+                            SMove(ldiff)
                         }
 
                         firstByte.endsWithBits(0b111) -> {
@@ -159,6 +177,36 @@ interface Command {
                             val dy = (nd / 3) % 3 - 1
                             val dx = nd / 9 - 1
                             Fill(NearCoordDiff(dx, dy, dz))
+                        }
+
+                        firstByte.endsWithBits(0b010) -> {
+                            val nd = firstByte.subBits(0..4)
+                            val dz = nd % 3 - 1
+                            val dy = (nd / 3) % 3 - 1
+                            val dx = nd / 9 - 1
+                            Void(NearCoordDiff(dx, dy, dz))
+                        }
+
+                        firstByte.endsWithBits(0b001) -> {
+                            val nd = firstByte.subBits(0..4)
+                            val dz = nd % 3 - 1
+                            val dy = (nd / 3) % 3 - 1
+                            val dx = nd / 9 - 1
+                            val fdx = bits.readBits(8).toInt()
+                            val fdy = bits.readBits(8).toInt()
+                            val fdz = bits.readBits(8).toInt()
+                            GFill(NearCoordDiff(dx, dy, dz), FarCoordDiff(fdx, fdy, fdz))
+                        }
+
+                        firstByte.endsWithBits(0b000) -> {
+                            val nd = firstByte.subBits(0..4)
+                            val dz = nd % 3 - 1
+                            val dy = (nd / 3) % 3 - 1
+                            val dx = nd / 9 - 1
+                            val fdx = bits.readBits(8).toInt()
+                            val fdy = bits.readBits(8).toInt()
+                            val fdz = bits.readBits(8).toInt()
+                            GVoid(NearCoordDiff(dx, dy, dz), FarCoordDiff(fdx, fdy, fdz))
                         }
 
                         else -> throw IllegalStateException("Cannot read byte: ${firstByte.toBinary()}")
