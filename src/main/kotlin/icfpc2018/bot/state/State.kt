@@ -1,6 +1,7 @@
 package icfpc2018.bot.state
 
 import icfpc2018.bot.state.LinearCoordDiff.Axis.*
+import icfpc2018.solutions.sections.indices
 import org.organicdesign.fp.collections.PersistentTreeSet
 import java.util.*
 import kotlin.math.abs
@@ -14,11 +15,13 @@ data class Bot(val id: Int, val position: Point, val seeds: SortedSet<Int>) : Co
     override fun compareTo(other: Bot): Int = id - other.id
 }
 
-data class State(val energy: Int, val harmonics: Harmonics, val matrix: Model, val bots: PersistentTreeSet<Bot>)
+data class State(val energy: Long, val harmonics: Harmonics, val matrix: Model, val bots: PersistentTreeSet<Bot>)
 
 data class Point(val x: Int, val y: Int, val z: Int) {
     companion object {
         val ZERO = Point(0, 0, 0)
+
+        val MINUS_ONE_TO_ONE = listOf(-1, 0, 1)
     }
 }
 
@@ -55,6 +58,19 @@ open class CoordDiff(val dx: Int, val dy: Int, val dz: Int) {
 }
 
 operator fun Point.plus(cd: CoordDiff) = Point(x + cd.dx, y + cd.dy, z + cd.dz)
+
+fun Point.options(dx: List<Int>, dy: List<Int>, dz: List<Int>): Set<Point> =
+        (dx.map { copy(x = x + it, y = y, z = z) } +
+                dy.map { copy(x = x, y = y + it, z = z) } +
+                dz.map { copy(x = x, y = y, z = z + it) }).toSet()
+
+fun Set<Point>.inRange(model: Model) =
+        filter {
+            val indices = 0 until model.size
+            it.x in indices &&
+                    it.y in indices &&
+                    it.z in indices
+        }.toSet()
 
 open class LinearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
     enum class Axis { X, Y, Z }

@@ -3,14 +3,14 @@ package icfpc2018.bot.commands
 import icfpc2018.bot.state.*
 import icfpc2018.bot.state.Harmonics.HIGH
 import icfpc2018.bot.state.Harmonics.LOW
+import icfpc2018.bot.util.minus
+import icfpc2018.bot.util.plus
 import org.apache.commons.compress.utils.BitInputStream
 import org.organicdesign.fp.collections.PersistentTreeSet
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteOrder
 import java.util.*
-import icfpc2018.bot.util.plus
-import icfpc2018.bot.util.minus
 
 fun Int.toBinary(size: Int) = ("0".repeat(32) + toString(2)).takeLast(size)
 fun Long.toBinary(size: Int = 8) = ("0".repeat(64) + toString(2)).takeLast(size)
@@ -92,7 +92,7 @@ interface Command {
                 0b11111101L -> Flip
                 else -> {
                     when {
-                        firstByte.endsWithBits(0b0100) ->  {
+                        firstByte.endsWithBits(0b0100) -> {
                             val llda = firstByte.subBits(2..3)
                             val secondByteEnc = bits.readBits(8)
                             val lldi = secondByteEnc.subBits(3..7)
@@ -104,7 +104,7 @@ interface Command {
                             }
                             SMove(ldiff)
                         }
-                        firstByte.endsWithBits(0b1100) ->{
+                        firstByte.endsWithBits(0b1100) -> {
                             val sld2a = firstByte.subBits(0..1)
                             val sld1a = firstByte.subBits(2..3)
                             val secondByteEnc = bits.readBits(8)
@@ -277,11 +277,11 @@ data class Fission(val nd: NearCoordDiff, val m: Int) : SimpleCommand {
         return state.copy(
                 energy = state.energy + 24,
                 bots = state.bots - bot
-                        + bot.copy(seeds = TreeSet(bids[2]!!.map { it.value }))
+                        + bot.copy(seeds = TreeSet(bids.getOrDefault(2, emptyList()).map { it.value }))
                         + Bot(
                         id = bot.seeds.first(),
                         position = bot.position + nd,
-                        seeds = TreeSet(bids[1]!!.map { it.value }))
+                        seeds = TreeSet(bids.getOrDefault(1, emptyList()).map { it.value }))
         )
     }
 
@@ -293,7 +293,7 @@ data class Fission(val nd: NearCoordDiff, val m: Int) : SimpleCommand {
         val newPos = bot.position + nd
         // TODO: validate new pos
         if (state.matrix[newPos]) return false
-        if (state.bots.size < m + 1) return false
+        if (bot.seeds.size < m + 1) return false
         return true
     }
 }
