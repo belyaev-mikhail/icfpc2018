@@ -1,6 +1,7 @@
 package icfpc2018.bot.state
 
 import icfpc2018.bot.state.LinearCoordDiff.Axis.*
+import icfpc2018.solutions.sections.indices
 import org.organicdesign.fp.collections.PersistentTreeSet
 import java.util.*
 import kotlin.math.abs
@@ -65,11 +66,10 @@ fun Point.options(dx: List<Int>, dy: List<Int>, dz: List<Int>): Set<Point> =
 
 fun Set<Point>.inRange(model: Model) =
         filter {
-            with(it) {
-                x < 0 || x >= model.size
-                        || y < 0 || y >= model.size
-                        || z < 0 || z >= model.size
-            }
+            val indices = 0 until model.size
+            it.x in indices &&
+                    it.y in indices &&
+                    it.z in indices
         }.toSet()
 
 open class LinearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
