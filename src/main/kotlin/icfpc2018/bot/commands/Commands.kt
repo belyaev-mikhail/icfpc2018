@@ -293,7 +293,7 @@ data class Fission(val nd: NearCoordDiff, val m: Int) : SimpleCommand {
         val newPos = bot.position + nd
         // TODO: validate new pos
         if (state.matrix[newPos]) return false
-        if (state.bots.size < m + 1) return false
+        if (bot.seeds.size < m + 1) return false
         return true
     }
 }
