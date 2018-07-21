@@ -21,7 +21,7 @@ data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean
 
     fun set(point: Point) = run {
         val res = copy(data = data.assoc(point.index, point.isTriviallyGrounded))
-        val mut = data.mutable()
+        val mut = res.data.mutable()
         res.propagateGroundness(point, mut)
         res.copy(data = mut.immutable())
     }
