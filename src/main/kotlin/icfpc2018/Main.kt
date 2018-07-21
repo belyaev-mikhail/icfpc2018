@@ -29,7 +29,7 @@ fun main(args: Array<String>) {
         val targetModel = Model.readMDL(targetModelFile)
 
         val model = Model(targetModel.size)
-        val bot = Bot(1, Point(0, 0, 0), (2..20).toSortedSet())
+        val bot = Bot(1, Point(0, 0, 0), (2..Config.maxBots).toSortedSet())
         val state = State(0, Harmonics.LOW, model, persistentTreeSetOf(bot))
 
         val system = System(state)

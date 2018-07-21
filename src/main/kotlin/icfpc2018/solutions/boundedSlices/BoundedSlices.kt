@@ -1,5 +1,6 @@
 package icfpc2018.solutions.boundedSlices
 
+import icfpc2018.Config
 import icfpc2018.bot.commands.*
 import icfpc2018.bot.state.*
 import icfpc2018.solutions.Solution
@@ -35,7 +36,7 @@ class BoundedSlices(val target: Model, val system: System) : Solution {
     }
 
     private fun linearFission() {
-        val maxBotIndex = Integer.min(target.box.width, 20) - 1
+        val maxBotIndex = Integer.min(target.box.width, Config.maxBots) - 1
         for (i in 0 until maxBotIndex) {
             val commands = ArrayList<Command>()
             for (j in 0 until i) {

@@ -1,5 +1,6 @@
 package icfpc2018.solutions.tripleSlices
 
+import icfpc2018.Config
 import icfpc2018.bot.commands.*
 import icfpc2018.bot.state.*
 import icfpc2018.bot.state.LinearCoordDiff.Axis.X
@@ -12,7 +13,7 @@ class TripleSlices(val target: Model, val system: System) : Solution {
     var isZForward = false
 
     override fun solve() {
-        val botCount = min(20, target.size / 3)
+        val botCount = min(Config.maxBots, target.size / 3)
 
         initialLinearFission(botCount, system)
         val numBots = system.numBots

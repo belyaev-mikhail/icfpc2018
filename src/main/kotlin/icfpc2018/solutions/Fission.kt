@@ -1,5 +1,6 @@
 package icfpc2018.solutions
 
+import icfpc2018.Config
 import icfpc2018.bot.commands.Command
 import icfpc2018.bot.commands.Fission
 import icfpc2018.bot.commands.Wait
@@ -15,7 +16,7 @@ fun initialLinearFission(bots: Int, system: System) {
 
 fun linearFission(bots: Int): List<List<Command>> {
     val trace = ArrayList<List<Command>>()
-    val maxBotIndex = Integer.min(bots, 20) - 1
+    val maxBotIndex = Integer.min(bots, Config.maxBots) - 1
     for (i in 0 until maxBotIndex) {
         val stepTrace = ArrayList<Command>()
         for (j in 0 until i) {
