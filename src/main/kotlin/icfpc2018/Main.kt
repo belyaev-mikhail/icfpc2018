@@ -12,7 +12,7 @@ import java.io.StringReader
 fun main(args: Array<String>) {
     val arguments = Arguments(args)
     val targetModelName = arguments.getValue("model") ?: throw IllegalArgumentException()
-    val solutionName = arguments.getValue("solution") ?: "trace"
+    val solutionName = arguments.getValue("solution") ?: throw IllegalArgumentException()
 
     val resultsFile = File("results/results.json")
     val resultReader = when {
