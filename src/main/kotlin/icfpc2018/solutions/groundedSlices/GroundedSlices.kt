@@ -1,4 +1,4 @@
-package icfpc2018.solutions.slices
+package icfpc2018.solutions.groundedSlices
 
 import icfpc2018.bot.commands.*
 import icfpc2018.bot.state.*
@@ -6,7 +6,7 @@ import icfpc2018.solutions.Solution
 import icfpc2018.solutions.initialLinearFission
 
 
-class Slices(val target: Model, val system: System) : Solution {
+class GroundedSlices(val target: Model, val system: System) : Solution {
 
     var isZForward = false
 
@@ -84,6 +84,18 @@ class Slices(val target: Model, val system: System) : Solution {
     }
 
     private fun build() {
+        val isGrounded = system.currentState.matrix.isEverybodyGrounded
+        val timeStamp = system.timeStamp()
+        flipTo(Harmonics.HIGH)
+        atomicBuild()
+        if (!system.currentState.matrix.isEverybodyGrounded) return
+        if (!isGrounded) return
+        system.rollBackTo(timeStamp)
+        flipTo(Harmonics.LOW)
+        atomicBuild()
+    }
+
+    private fun atomicBuild() {
         val commands = ArrayList<Command>()
         for (bot in system.currentState.bots) {
             val diff = NearCoordDiff(0, -1, 0)

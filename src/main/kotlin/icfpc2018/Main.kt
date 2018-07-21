@@ -3,6 +3,7 @@ package icfpc2018
 import icfpc2018.bot.commands.Command
 import icfpc2018.bot.state.*
 import icfpc2018.bot.util.persistentTreeSetOf
+import icfpc2018.solutions.groundedSlices.GroundedSlices
 import icfpc2018.solutions.sections.Sections
 import icfpc2018.solutions.slices.Slices
 import icfpc2018.solutions.trace.Trace
@@ -44,6 +45,7 @@ fun main(args: Array<String>) {
             }
             "sections" -> Sections(targetModel, system)
             "slices" -> Slices(targetModel, system)
+            "grounded_slices" -> GroundedSlices(targetModel, system)
             else -> throw IllegalArgumentException()
         }
         log.info(solution::class.java.name)
