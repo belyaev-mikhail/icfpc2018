@@ -20,6 +20,6 @@ class SchedulingSystem(currentState: State, mode: Mode = Mode.DEBUG) : System(cu
     }
 
     fun schedule(bot: Bot, cmd: Command) {
-        commandQueues.computeIfAbsent(bot) { _ -> LinkedList() }.addLast(cmd)
+        commandQueues.computeIfAbsent(bot) { _ -> LinkedList<Command>() }.addLast(cmd)
     }
 }
