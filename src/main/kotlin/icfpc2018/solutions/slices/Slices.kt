@@ -84,11 +84,11 @@ class Slices(val target: Model, val system: System) : Solution {
     }
 
     private fun build() {
-        val isGrounded = system.currentState.matrix.isGrounded()
+        val isGrounded = system.currentState.matrix.isEverybodyGrounded
         val timeStamp = system.timeStamp()
         flipTo(Harmonics.HIGH)
         atomicBuild()
-        if (!system.currentState.matrix.isGrounded()) return
+        if (!system.currentState.matrix.isEverybodyGrounded) return
         if (!isGrounded) return
         system.rollBackTo(timeStamp)
         flipTo(Harmonics.LOW)
