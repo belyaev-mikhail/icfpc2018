@@ -4,8 +4,8 @@ import icfpc2018.bot.commands.Command
 import icfpc2018.bot.state.System
 import icfpc2018.solutions.Solution
 
-class Trace(val trace: List<Command>) : Solution {
-    override fun apply(system: System) {
+class Trace(val trace: List<Command>, val system: System) : Solution {
+    override fun solve() {
         var myTrace = trace
 
         with(system) {

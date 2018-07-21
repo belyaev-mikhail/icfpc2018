@@ -1,10 +1,9 @@
 package icfpc2018
 
 import com.xenomachina.argparser.ArgParser
-import icfpc2018.bot.commands.Command
 import icfpc2018.bot.state.*
 import icfpc2018.bot.util.persistentTreeSetOf
-import icfpc2018.solutions.trace.Trace
+import icfpc2018.solutions.sections.Sections
 import java.io.File
 import java.io.FileOutputStream
 
@@ -23,27 +22,23 @@ fun main(args: Array<String>) {
         val targetModel = Model.readMDL(targetModelFile)
 
         val model = Model(targetModel.size)
-
         val bot = Bot(1, Point(0, 0, 0), (2..20).toSortedSet())
-
         val state = State(0, Harmonics.LOW, model, persistentTreeSetOf(bot))
-
         val system = System(state)
 
-        val traceFile = File("traces/$currFileName.nbt").inputStream()
-        val commands: MutableList<Command> = mutableListOf()
-        while (traceFile.available() != 0) {
-            commands += Command.read(traceFile)
-        }
+        val solution = Sections(targetModel, system)
 
-        val solution = Trace(commands)
-
-        solution.apply(system)
+        solution.solve()
 
         val ofile = FileOutputStream(File("traces/$currFileName.my.nbt"))
         system.commandTrace.forEach { it.write(ofile) }
 
-        log.info { "Correct: " + (system.currentState.matrix == targetModel) }
         log.info { "Energy: " + system.currentState.energy }
+        val success = system.currentState.matrix == targetModel
+        log.info(if (success) "Success" else "Fail")
+        if (success) {
+            val ofile = FileOutputStream(File("solutions/sections/$currFileName.nbt"))
+            system.commandTrace.forEach { it.write(ofile) }
+        }
     }
 }
