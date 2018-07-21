@@ -267,8 +267,8 @@ object Halt : SimpleCommand {
             bot.position != Point.ZERO -> throw CheckError(
                     this, "Bot position is ${bot.position}"
             )
-            bot in state.bots && 1 == state.bots.size -> throw CheckError(
-                    this, "Bot set is ${state.bots}"
+            bot !in state.bots || 1 != state.bots.size -> throw CheckError(
+                    this, "Bot state is ${state.bots}, bot is $bot"
             )
             state.harmonics != LOW -> throw CheckError(
                     this, "State harmonics is ${state.harmonics}"
@@ -351,20 +351,25 @@ data class Fission(val nd: NearCoordDiff, val m: Int) : SimpleCommand {
     override fun apply(bot: Bot, state: State): State {
         val bids = bot.seeds
                 .withIndex()
-                .filter { (idx, seed) -> idx in setOf(0, 1, m + 1) }
+                .filter { (idx, _) -> idx in setOf(0, 1, m + 1) }
 
-        val (newId, from, to) =
-                bids.map { it.value }
+        val ids = bids.map { it.value }
+
+        val (newId) = ids
+
+        val from = if (ids.size > 1) ids[1] else Int.MAX_VALUE
+
+        val to = if (ids.size > 2) ids[2] else Int.MAX_VALUE
 
         return state.copy(
                 energy = state.energy + 24,
                 bots = state.bots
                         - bot
-                        + bot.copy(seeds = bot.seeds.subSet(from, to))
+                        + bot.copy(seeds = bot.seeds.tailSet(to))
                         + Bot(
                         id = newId,
                         position = bot.position + nd,
-                        seeds = bot.seeds.tailSet(to)
+                        seeds = bot.seeds.subSet(from, to)
                 )
         )
     }
@@ -438,8 +443,6 @@ data class Void(val nd: NearCoordDiff) : SimpleCommand {
         )
     }
 }
-
-// TODO: Add fusion id
 
 data class FusionP(val nd: NearCoordDiff) : SimpleCommand {
     override fun apply(bot: Bot, state: State): State = TODO()
