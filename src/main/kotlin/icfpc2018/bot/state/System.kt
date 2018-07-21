@@ -19,6 +19,9 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
     val numBots: Int
         get() = currentState.bots.size
 
+    val score: Long
+        get() = currentState.energy
+
     var commandTrace = mutableListOf<Command>()
 
     var stateTrace = mutableListOf(currentState)

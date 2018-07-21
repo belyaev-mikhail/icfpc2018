@@ -3,6 +3,8 @@ package icfpc2018
 import org.apache.commons.cli.*
 import java.io.PrintWriter
 import java.io.StringWriter
+import kotlin.math.max
+import kotlin.math.min
 
 class Arguments(args: Array<String>) {
     private val options = Options()
@@ -38,6 +40,10 @@ class Arguments(args: Array<String>) {
         to.isRequired = false
         options.addOption(to)
 
+        val reversed = Option("r", "reversed", false, "run models in reverse")
+        reversed.isRequired = false
+        options.addOption(reversed)
+
         val submit = Option(null, "submit", false, "dump traces in format for submission")
         submit.isRequired = false
         options.addOption(submit)
@@ -45,6 +51,7 @@ class Arguments(args: Array<String>) {
 
 
     fun isSubmit() = cmd.hasOption("submit")
+    fun isReversed() = cmd.hasOption("reversed")
 
     fun getModelNums(): List<Int> {
         val model = getValue("model")?.toInt()
@@ -53,7 +60,10 @@ class Arguments(args: Array<String>) {
         val from = getValue("from")?.toInt() ?: 1
         val to = getValue("to")?.toInt() ?: 186
 
-        return (from..to).toList()
+        return when {
+            isReversed() -> (from..to).reversed().toList()
+            else -> (from..to).toList()
+        }
     }
 
     fun getModels(): List<String> = getModelNums().map { "LA%03d".format(it) }
