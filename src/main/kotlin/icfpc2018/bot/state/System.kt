@@ -26,8 +26,8 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
     fun timeStamp() = TimeStamp(commandTrace.size, stateTrace.size)
 
     fun rollBackTo(timeStamp: TimeStamp) {
-        commandTrace = commandTrace.subList(0, timeStamp.commandStamp)
-        stateTrace = stateTrace.subList(0, timeStamp.stateStamp)
+        commandTrace.subList(timeStamp.commandStamp, commandTrace.size).clear()
+        stateTrace.subList(timeStamp.stateStamp, stateTrace.size).clear()
         currentState = stateTrace.last()
     }
 
