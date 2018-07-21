@@ -13,7 +13,7 @@ class Portfolio(val target: Model, val system: System) : Solution {
     val initialState = State(0, Harmonics.LOW, model, persistentTreeSetOf(bot))
 
     companion object {
-        val solutionNames = listOf("slices", "grounded_slices", "bounded_slices", "grounded_bounded_slices")
+        val solutionNames = listOf("grounded_slices", "bounded_slices", "grounded_bounded_slices")
     }
 
     override fun solve() {
