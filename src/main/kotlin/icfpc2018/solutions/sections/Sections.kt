@@ -6,13 +6,14 @@ import icfpc2018.bot.state.System
 import icfpc2018.info
 import icfpc2018.log
 import icfpc2018.solutions.Solution
+import icfpc2018.solutions.initialLinearFission
 
 data class Section(val begin: Point, val end: Point)
 
 val Model.indices: IntRange
     get() = 0 until size
 
-class Sections(target: Model, system: System) : Solution {
+class Sections(target: Model, val system: System) : Solution {
 
     private val sections = crash(target)
 
@@ -20,6 +21,7 @@ class Sections(target: Model, system: System) : Solution {
 
     override fun solve() {
         log.info { maxStrawsInLayer.toString() }
+        initialLinearFission(maxStrawsInLayer, system)
     }
 
     companion object {
