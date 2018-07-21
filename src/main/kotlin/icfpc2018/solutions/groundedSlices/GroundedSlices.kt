@@ -4,6 +4,7 @@ import icfpc2018.bot.commands.*
 import icfpc2018.bot.state.*
 import icfpc2018.solutions.Solution
 import icfpc2018.solutions.initialLinearFission
+import kotlin.math.abs
 
 
 class GroundedSlices(val target: Model, val system: System) : Solution {
@@ -17,12 +18,12 @@ class GroundedSlices(val target: Model, val system: System) : Solution {
         val lastColumn = target.size % numBots
         for (i in 0 until numColumns) {
             if (i > 0)
-                shift()
+                shift(system.numBots)
             column()
         }
         if (lastColumn != 0) {
             merge(lastColumn)
-            shift()
+            shift(system.numBots)
             column()
         }
         flipTo(Harmonics.LOW)
@@ -33,7 +34,7 @@ class GroundedSlices(val target: Model, val system: System) : Solution {
 
     private fun column() {
         down()
-        for (i in 0..target.height) {
+        for (i in 0..target.box.top) {
             isZForward = !isZForward
             up()
             build()
@@ -130,11 +131,18 @@ class GroundedSlices(val target: Model, val system: System) : Solution {
         }
     }
 
-    private fun shift() {
-        val firstStep = system.numBots / 15
-        val secondStep = system.numBots % 15
-        if (firstStep != 0) atomicShift(15)
-        if (secondStep != 0) atomicShift(secondStep)
+    private fun shift(by: Int) {
+        var step = by / 15
+        val dir = step > 0
+        step = abs(step)
+        while (step != 0) {
+            atomicShift(if (dir) 15 else -15)
+            if (dir) step-- else step++
+        }
+        val rest = by % 15
+        if (rest != 0) {
+            atomicShift(rest)
+        }
     }
 
     private fun atomicShift(size: Int) {

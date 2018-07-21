@@ -1,16 +1,10 @@
 package icfpc2018
 
 import icfpc2018.bot.commands.Command
-import icfpc2018.bot.commands.Flip
 import icfpc2018.bot.state.*
 import icfpc2018.bot.util.persistentTreeSetOf
 import icfpc2018.solutions.getSolutionByName
-import icfpc2018.solutions.groundedSlices.GroundedSlices
-import icfpc2018.solutions.portfolio.Portfolio
-import icfpc2018.solutions.sections.Sections
-import icfpc2018.solutions.slices.Slices
 import icfpc2018.solutions.trace.Trace
-import icfpc2018.solutions.tripleSlices.TripleSlices
 import java.io.File
 import java.io.FileOutputStream
 import java.io.StringReader

@@ -9,11 +9,26 @@ import java.io.OutputStream
 import java.nio.ByteOrder
 import java.util.*
 
+
+data class Box(val left: Int, val right: Int, val top: Int, val bottom: Int, val middle: Int, val back: Int) {
+    val width = right - left
+    val height = top - bottom
+    val depth = back - middle
+}
+
 data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean> = PersistentHashMap.empty(),
                  val numGrounded: Int = 0) {
     val sizeCubed by lazy { size * size * size }
 
-    val height by lazy { data.keys.map { deconvertCoordinates(it).y }.max()!! }
+    val box by lazy {
+        val right = data.keys.map { deconvertCoordinates(it).x }.max()!!
+        val left = data.keys.map { deconvertCoordinates(it).x }.min()!!
+        val top = data.keys.map { deconvertCoordinates(it).y }.max()!!
+        val bottom = data.keys.map { deconvertCoordinates(it).y }.min()!!
+        val back = data.keys.map { deconvertCoordinates(it).z }.max()!!
+        val middle = data.keys.map { deconvertCoordinates(it).z }.min()!!
+        Box(left, right, top, bottom, middle, back)
+    }
 
     operator fun get(point: Point) = get(point.x, point.y, point.z)
 

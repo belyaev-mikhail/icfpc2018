@@ -1,21 +1,21 @@
-package icfpc2018.solutions.slices
+package icfpc2018.solutions.groundedBoundedSlices
 
 import icfpc2018.bot.commands.*
 import icfpc2018.bot.state.*
 import icfpc2018.solutions.Solution
-import icfpc2018.solutions.initialLinearFission
 
+data class Rectangle(val left: Int, val right: Int, val top: Int, val bottom: Int)
 
-class Slices(val target: Model, val system: System) : Solution {
+class GroundedBoundedSlices(val target: Model, val system: System) : Solution {
 
     var isZForward = false
 
     override fun solve() {
-        initialLinearFission(target.size, system)
+        linearFission()
         val numBots = system.numBots
-        val numColumns = target.size / numBots
-        val lastColumn = target.size % numBots
-        flipTo(Harmonics.HIGH)
+        val numColumns = target.box.width / numBots
+        val lastColumn = target.box.width % numBots
+//        goToStart()
         for (i in 0 until numColumns) {
             if (i > 0)
                 shift()
@@ -32,13 +32,25 @@ class Slices(val target: Model, val system: System) : Solution {
         halt()
     }
 
+    private fun linearFission() {
+        val maxBotIndex = Integer.min(target.box.width, 20) - 1
+        for (i in 0 until maxBotIndex) {
+            val commands = ArrayList<Command>()
+            for (j in 0 until i) {
+                commands.add(Wait)
+            }
+            commands.add(Fission(NearCoordDiff(1, 0, 0), maxBotIndex - i - 1))
+            system.timeStep(commands)
+        }
+    }
+
     private fun column() {
         down()
         for (i in 0..target.box.top) {
             isZForward = !isZForward
             up()
             build()
-            for (j in 0 until target.size - 1) {
+            for (j in 0 until target.box.depth - 1) {
                 forward()
                 build()
             }
@@ -85,6 +97,18 @@ class Slices(val target: Model, val system: System) : Solution {
     }
 
     private fun build() {
+        val timeStamp = system.timeStamp()
+        atomicBuild()
+        if (system.currentState.matrix.isEverybodyGrounded) {
+            flipTo(Harmonics.LOW)
+            return
+        }
+        system.rollBackTo(timeStamp)
+        flipTo(Harmonics.HIGH)
+        atomicBuild()
+    }
+
+    private fun atomicBuild() {
         val commands = ArrayList<Command>()
         for (bot in system.currentState.bots) {
             val diff = NearCoordDiff(0, -1, 0)
