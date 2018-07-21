@@ -169,3 +169,11 @@ class NearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
                 NearCoordDiff(target.x - origin.x, target.y - origin.y, target.z - origin.z)
     }
 }
+
+class FarCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
+    init {
+        assert(dx in -30..30)
+        assert(dy in -30..30)
+        assert(dz in -30..30)
+    }
+}
