@@ -15,6 +15,7 @@ class Slices(val target: Model, val system: System) : Solution {
         val numBots = system.numBots
         val numColumns = target.size / numBots
         val lastColumn = target.size % numBots
+        flipTo(Harmonics.HIGH)
         for (i in 0 until numColumns) {
             if (i > 0)
                 shift()
