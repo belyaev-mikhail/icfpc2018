@@ -237,7 +237,7 @@ data class SMove(val lld: LongCoordDiff) : SimpleCommand {
 
     override fun check(bot: Bot, state: State): Boolean {
         val newPos = bot.position + lld
-        // TODO: validate new pos
+        if (!newPos.inRange(state.matrix)) return false
         for (ac in volatileCoords(bot)) {
             if (state.matrix[ac]) return false
         }
@@ -256,8 +256,10 @@ data class LMove(val sld1: ShortCoordDiff, val sld2: ShortCoordDiff) : SimpleCom
             sld1.affectedCoords(bot.position) + sld2.affectedCoords(bot.position + sld1)
 
     override fun check(bot: Bot, state: State): Boolean {
-        val newPos = bot.position + sld1 + sld2
-        // TODO: validate new pos
+        val newPos1 = bot.position + sld1
+        if (!newPos1.inRange(state.matrix)) return false
+        val newPos2 = newPos1 + sld2
+        if (!newPos2.inRange(state.matrix)) return false
         for (ac in volatileCoords(bot)) {
             if (state.matrix[ac]) return false
         }
@@ -291,7 +293,7 @@ data class Fission(val nd: NearCoordDiff, val m: Int) : SimpleCommand {
     override fun check(bot: Bot, state: State): Boolean {
         if (bot.seeds.isEmpty()) return false
         val newPos = bot.position + nd
-        // TODO: validate new pos
+        if (!newPos.inRange(state.matrix)) return false
         if (state.matrix[newPos]) return false
         if (bot.seeds.size < m + 1) return false
         return true
@@ -317,7 +319,7 @@ data class Fill(val nd: NearCoordDiff) : SimpleCommand {
 
     override fun check(bot: Bot, state: State): Boolean {
         val newPos = bot.position + nd
-        // TODO: validate new pos
+        if (!newPos.inRange(state.matrix)) return false
         return true
     }
 }
