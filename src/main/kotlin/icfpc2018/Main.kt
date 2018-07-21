@@ -58,6 +58,7 @@ fun main(args: Array<String>) {
         if (success) {
             if (isSubmit) {
                 val submitFile = "submit/${targetModelName}.nbt"
+                log.info("Writing $submitFile")
                 val submitstream = FileOutputStream(File(submitFile).apply { this.parentFile.mkdirs() })
                 system.commandTrace.forEach { it.write(submitstream) }
 
