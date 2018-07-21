@@ -46,7 +46,7 @@ data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean
             mutableData: PersistentHashMap.MutableHashMap<Int, Boolean> = data.mutable()
     ): Int {
         var numGrounded = numGrounded
-        val neighbors = p.options(listOf(-1, 1), listOf(-1, 1), listOf(-1, 1)).filter {
+        val neighbors = p.immediateNeighbours().filter {
             it.inBounds && mutableData[it.index] != null
         }
         val grounded = p.isTriviallyGrounded || mutableData[p.index] == true || neighbors.any { mutableData[it.index] == true }
@@ -62,7 +62,7 @@ data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean
             val e = toProceed.remove()
             if(mutableData[e.index] == false) ++numGrounded
             mutableData.assoc(e.index, true)
-            val notGroundedNeighbors = e.options(listOf(-1, 1), listOf(-1, 1), listOf(-1, 1)).filter {
+            val notGroundedNeighbors = e.immediateNeighbours().filter {
                 it.inBounds && mutableData[it.index] == false && it !in visited
             }
             visited.addAll(notGroundedNeighbors)

@@ -1,5 +1,7 @@
 package icfpc2018.solutions
 
+import icfpc2018.bot.algo.AStar
+import icfpc2018.bot.commands.allPossibleMoves
 import icfpc2018.bot.state.*
 
 fun botPairs(bots: Int, system: System): MutableList<Pair<Bot, Bot>> {
@@ -21,6 +23,15 @@ inline operator fun Point.get(axis: LinearCoordDiff.Axis) = when(axis) {
     LinearCoordDiff.Axis.X -> x
     LinearCoordDiff.Axis.Y -> y
     LinearCoordDiff.Axis.Z -> z
+}
+
+fun meet(bot1: Bot, bot2: Bot, system: System) {
+//
+//    AStar<State>(
+//            neighbours = { },
+//            heuristic = { },
+//            goal = {  }
+//    )
 }
 
 fun comeTogether(bots: Pair<Bot, Bot>, system: SchedulingSystem) {

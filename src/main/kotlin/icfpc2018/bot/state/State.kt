@@ -63,6 +63,15 @@ open class CoordDiff(val dx: Int, val dy: Int, val dz: Int) {
 operator fun Point.plus(cd: CoordDiff) = Point(x + cd.dx, y + cd.dy, z + cd.dz)
 operator fun Point.minus(that: Point) = CoordDiff(this.x - that.x, this.y - that.y, this.z - that.z)
 
+fun Point.immediateNeighbours() = listOf(
+        Point(x + 1, y, z),
+        Point(x - 1, y, z),
+        Point(x, y + 1, z),
+        Point(x, y - 1, z),
+        Point(x, y, z + 1),
+        Point(x, y, z - 1)
+        )
+
 fun Point.options(dx: List<Int>, dy: List<Int>, dz: List<Int>): Set<Point> {
     val res = mutableSetOf<Point>()
     for (xx in dx) {
