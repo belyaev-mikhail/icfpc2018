@@ -8,9 +8,11 @@ enum class Mode {
 
 class ExecutionError : Exception()
 
-class CommandCheckError(msg: String) : Exception(msg)
-
 class GroupCommandError : Exception()
+
+class VolatileCoordError(msg: String) : Exception(msg)
+
+class GroundError : Exception()
 
 data class TimeStamp(val commandStamp: Int, val stateStamp: Int)
 
@@ -48,27 +50,33 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
 
         var execState = currentState.copy(energy = energy)
 
-        val ungroupedCommands = mutableListOf<Pair<Bot, Command>>()
+        val fusionPrimary = mutableListOf<Pair<Bot, FusionP>>()
+        val fusionSecondary = mutableListOf<Pair<Bot, FusionS>>()
+        val gFills = mutableListOf<Pair<Bot, GFill>>()
+        val gVoids = mutableListOf<Pair<Bot, GVoid>>()
 
-        // TODO: Check volatile coords for non-intersection
+        val simpleCommands = mutableListOf<Pair<Bot, SimpleCommand>>()
 
         for ((bot, cmd) in currentState.bots.zip(commands)) {
             when (cmd) {
-                is FusionP, is FusionS -> {
-                    ungroupedCommands.add(bot to cmd)
+                is FusionP -> {
+                    fusionPrimary.add(bot to cmd)
+                }
+                is FusionS -> {
+                    fusionSecondary.add(bot to cmd)
+                }
+                is GFill -> {
+                    gFills.add(bot to cmd)
+                }
+                is GVoid -> {
+                    gVoids.add(bot to cmd)
                 }
                 is SimpleCommand -> {
-                    if (Mode.DEBUG == mode) if (!cmd.check(bot, execState)) throw CommandCheckError(
-                            "For $cmd of $bot with $execState"
-                    )
-                    execState = cmd.apply(bot, execState)
+                    simpleCommands.add(bot to cmd)
                 }
             }
             commandTrace.add(cmd)
         }
-
-        val fusionPrimary = ungroupedCommands.filter { it.second is FusionP }
-        val fusionSecondary = ungroupedCommands.filter { it.second is FusionS }
 
         if (fusionPrimary.size != fusionSecondary.size) throw GroupCommandError()
 
@@ -76,9 +84,6 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
 
         for ((botP, cmdP) in fusionPrimary) {
             for ((botS, cmdS) in fusionSecondary) {
-                if (cmdP !is FusionP) throw GroupCommandError()
-                if (cmdS !is FusionS) throw GroupCommandError()
-
                 val posP = botP.position + cmdP.nd
                 val posS = botS.position + cmdS.nd
                 if (posP == botS.position && posS == botP.position) {
@@ -87,18 +92,61 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
             }
         }
 
-        if (groupedCommands.size != fusionPrimary.size) throw GroupCommandError()
+        val regionGFill = gFills.groupBy {
+            (it.first.position + it.second.nd to it.first.position + it.second.nd + it.second.fd).normalize()
+        }
+
+        val regionGVoid = gVoids.groupBy {
+            (it.first.position + it.second.nd to it.first.position + it.second.nd + it.second.fd).normalize()
+        }
+
+        for ((region, data) in regionGFill) {
+            val (bots, components) = data.unzip()
+            groupedCommands.add(bots to GFillT(components))
+        }
+
+        for ((region, data) in regionGVoid) {
+            val (bots, components) = data.unzip()
+            groupedCommands.add(bots to GVoidT(components))
+        }
+
+        val volatileCoords = mutableMapOf<Point, Pair<List<Bot>, Command>>()
+
+        for ((bot, cmd) in simpleCommands) {
+            val myVolatile = cmd.volatileCoords(bot)
+            val conflict = myVolatile.find { it in volatileCoords }
+            if (conflict != null) throw VolatileCoordError(
+                    "Conflict point $conflict for ${bot to cmd} and ${volatileCoords[conflict]}"
+            )
+            myVolatile.forEach { volatileCoords[it] = listOf(bot) to cmd }
+        }
 
         for ((bots, cmd) in groupedCommands) {
-            if (Mode.DEBUG == mode) if (!cmd.check(bots, execState)) throw CommandCheckError(
-                    "For $cmd of $bots with $execState"
+            val myVolatile = cmd.volatileCoords(bots)
+            val conflict = myVolatile.find { it in volatileCoords }
+            if (conflict != null) throw VolatileCoordError(
+                    "Conflict point $conflict for ${bots to cmd} and ${volatileCoords[conflict]}"
             )
+            myVolatile.forEach { volatileCoords[it] = bots to cmd }
+        }
+
+        for ((bot, cmd) in simpleCommands) {
+            if (Mode.DEBUG == mode) cmd.check(bot, execState)
+            execState = cmd.apply(bot, execState)
+        }
+
+        for ((bots, cmd) in groupedCommands) {
+            if (Mode.DEBUG == mode) cmd.check(bots, execState)
             execState = cmd.apply(bots, execState)
         }
 
         stateTrace.add(execState)
 
         currentState = execState
+
+        if (currentState.harmonics == Harmonics.LOW &&
+                !currentState.matrix.isEverybodyGrounded)
+            throw GroundError()
 
         return true
     }
