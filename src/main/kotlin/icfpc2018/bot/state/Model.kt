@@ -9,6 +9,8 @@ import java.io.OutputStream
 import java.nio.ByteOrder
 
 data class Model(val size: Int, private val data: PersistentHashSet<Int> = PersistentHashSet.empty()) {
+    val height by lazy { data.map { deconvertCoordinates(it).y }.max()!! }
+
     val sizeCubed by lazy { size * size * size }
 
     operator fun get(point: Point) = get(point.x, point.y, point.z)
@@ -23,6 +25,9 @@ data class Model(val size: Int, private val data: PersistentHashSet<Int> = Persi
     operator fun set(point: Point, value: Boolean) = set(point.x, point.y, point.z, value)
 
     companion object {
+        private inline fun deconvertCoordinates(coord: Int) =
+                Point(coord % 256, (coord / 256) % 256, coord / (256 * 256))
+
         private inline fun convertCoordinates(x: Int, y: Int, z: Int) = x + 256 * y + 256 * 256 * z
 
         fun readMDL(bs: InputStream): Model {
@@ -51,18 +56,18 @@ data class Model(val size: Int, private val data: PersistentHashSet<Int> = Persi
 
         os.write(size)
 
-        for(ix in 0 until size) {
-            for(iy in 0 until size) {
-                for(iz in 0 until size) {
-                    byte += (if(get(ix, iy, iz)) "1" else "0")
-                    if(byte.length == 8) {
+        for (ix in 0 until size) {
+            for (iy in 0 until size) {
+                for (iz in 0 until size) {
+                    byte += (if (get(ix, iy, iz)) "1" else "0")
+                    if (byte.length == 8) {
                         os.write(byte.reversed().toInt(2))
                         byte = ""
                     }
                 }
             }
         }
-        if(byte.isNotEmpty()) os.write(byte.reversed().toInt(2))
+        if (byte.isNotEmpty()) os.write(byte.reversed().toInt(2))
     }
 }
 
