@@ -7,8 +7,10 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteOrder
+import java.util.*
 
-data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean> = PersistentHashMap.empty()) {
+data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean> = PersistentHashMap.empty(),
+                 val numGrounded: Int = 0) {
     val sizeCubed by lazy { size * size * size }
 
     val height by lazy { data.keys.map { deconvertCoordinates(it).y }.max()!! }
@@ -22,32 +24,48 @@ data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean
     fun set(point: Point) = run {
         val res = copy(data = data.assoc(point.index, point.isTriviallyGrounded))
         val mut = res.data.mutable()
-        res.propagateGroundness(point, mut)
-        res.copy(data = mut.immutable())
+        val newNumGrounded = res.propagateGroundness(point, mut)
+        res.copy(data = mut.immutable(), numGrounded = newNumGrounded)
     }
 
     fun isGrounded(x: Int, y: Int, z: Int) = data[convertCoordinates(x, y, z)] == true
     @JvmName("pleasePleasePleaseGoToHellWithYourNameAmbiguity")
     fun isGrounded(point: Point) = data[point.index] == true
 
+    val isEverybodyGrounded get() = data.size == numGrounded
+
     private val Point.isTriviallyGrounded inline get() = y == 0
     private val Point.index inline get() = convertCoordinates(x, y, z)
     private val Point.inBounds inline get() = x in 0 until size && y in 0 until size && z in 0 until size
 
-    private fun propagateGroundness(p: Point, mutableData: PersistentHashMap.MutableHashMap<Int, Boolean> = data.mutable()) {
+    private fun propagateGroundness(
+            p: Point,
+            mutableData: PersistentHashMap.MutableHashMap<Int, Boolean> = data.mutable()
+    ): Int {
+        var numGrounded = numGrounded
         val neighbors = p.options(listOf(-1, 1), listOf(-1, 1), listOf(-1, 1)).filter {
             it.inBounds && mutableData[it.index] != null
         }
         val grounded = p.isTriviallyGrounded || mutableData[p.index] == true || neighbors.any { mutableData[it.index] == true }
-        if (!grounded) return
+        if (!grounded) return numGrounded
 
+        if(mutableData[p.index] == false) ++numGrounded
         mutableData.assoc(p.index, true)
+
         val notGroundedNeighbors = neighbors.filterNot { it.isTriviallyGrounded || mutableData[it.index] == true }
-        for (neighbor in notGroundedNeighbors) {
-            mutableData.assoc(neighbor.index, true)
-            propagateGroundness(neighbor, mutableData)
+        val visited = notGroundedNeighbors.toMutableSet()
+        val toProceed: Queue<Point> = ArrayDeque(notGroundedNeighbors)
+        while(toProceed.isNotEmpty()) {
+            val e = toProceed.remove()
+            if(mutableData[e.index] == false) ++numGrounded
+            mutableData.assoc(e.index, true)
+            val notGroundedNeighbors = e.options(listOf(-1, 1), listOf(-1, 1), listOf(-1, 1)).filter {
+                it.inBounds && mutableData[it.index] == false && it !in visited
+            }
+            visited.addAll(notGroundedNeighbors)
+            toProceed.addAll(notGroundedNeighbors)
         }
-        return
+        return numGrounded
     }
 
     companion object {
@@ -73,7 +91,7 @@ data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean
                     }
                 }
             }
-            return Model(size, data)
+            return Model(size, data, data.size)
         }
     }
 

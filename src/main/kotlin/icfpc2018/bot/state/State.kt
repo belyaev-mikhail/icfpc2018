@@ -61,6 +61,7 @@ open class CoordDiff(val dx: Int, val dy: Int, val dz: Int) {
 }
 
 operator fun Point.plus(cd: CoordDiff) = Point(x + cd.dx, y + cd.dy, z + cd.dz)
+operator fun Point.minus(that: Point) = CoordDiff(this.x - that.x, this.y - that.y, this.z - that.z)
 
 fun Point.options(dx: List<Int>, dy: List<Int>, dz: List<Int>): Set<Point> {
     val res = mutableSetOf<Point>()
@@ -75,13 +76,15 @@ fun Point.options(dx: List<Int>, dy: List<Int>, dz: List<Int>): Set<Point> {
     return res
 }
 
+fun Point.inRange(model: Model): Boolean {
+    val indices = 0 until model.size
+    return x in indices &&
+            y in indices &&
+            z in indices
+}
+
 fun Set<Point>.inRange(model: Model) =
-        filterTo(mutableSetOf()) {
-            val indices = 0 until model.size
-            it.x in indices &&
-                    it.y in indices &&
-                    it.z in indices
-        }
+        filterTo(mutableSetOf()) { it.inRange(model) }
 
 open class LinearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
     enum class Axis { X, Y, Z }
@@ -110,6 +113,16 @@ open class LinearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
                 X -> (0..dx).map { Point(x + it, y, z) }
                 Y -> (0..dy).map { Point(x, y + it, z) }
                 Z -> (0..dz).map { Point(x, y, z + it) }
+            }
+        }
+    }
+
+    companion object {
+        fun fromAxis(axis: Axis, length: Int): LinearCoordDiff {
+            return when (axis) {
+                Axis.X -> LinearCoordDiff(length, 0, 0)
+                Axis.Y -> LinearCoordDiff(0, length, 0)
+                Axis.Z -> LinearCoordDiff(0, 0, length)
             }
         }
     }
