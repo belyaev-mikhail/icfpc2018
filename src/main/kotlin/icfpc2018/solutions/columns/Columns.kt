@@ -5,7 +5,7 @@ import icfpc2018.bot.state.Point.Companion.MINUS_ONE_TO_ONE
 import icfpc2018.solutions.Solution
 import icfpc2018.solutions.columns.Columns.Mode.*
 
-class Columns(val columnNumber: Int, val targetModel: Model) : Solution {
+class Columns(val system: SchedulingSystem, val columnNumber: Int, val targetModel: Model) : Solution {
     init {
         assert(columnNumber > 0)
     }
@@ -20,14 +20,10 @@ class Columns(val columnNumber: Int, val targetModel: Model) : Solution {
 
     var mode = CREATE
 
-    override fun apply(system: System) {
-        if (system !is SchedulingSystem) throw IllegalArgumentException(
-                "Column solution needs system of type SchedulingSystem"
-        )
-
+    override fun solve() {
         while (true) {
             when (mode) {
-                CREATE -> handleCreate(system)
+                CREATE -> handleCreate()
                 BUILD -> TODO()
                 MERGE -> TODO()
                 FINALIZE -> TODO()
@@ -36,7 +32,7 @@ class Columns(val columnNumber: Int, val targetModel: Model) : Solution {
         }
     }
 
-    fun handleCreate(system: SchedulingSystem) {
+    fun handleCreate() {
         while (true) {
             var botsToCreate = columnNumber - system.currentState.bots.size
 
