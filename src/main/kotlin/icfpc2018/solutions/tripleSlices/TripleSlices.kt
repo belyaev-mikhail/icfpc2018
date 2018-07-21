@@ -39,7 +39,7 @@ class TripleSlices(val target: Model, val system: System) : Solution {
 
     private fun column() {
         down()
-        for (i in 0..target.height) {
+        for (i in 0..target.box.top) {
             isZForward = !isZForward
             up()
             build()
