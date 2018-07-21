@@ -4,6 +4,7 @@ import icfpc2018.bot.commands.Command
 import icfpc2018.bot.state.*
 import icfpc2018.bot.util.persistentTreeSetOf
 import icfpc2018.solutions.sections.Sections
+import icfpc2018.solutions.slices.Slices
 import icfpc2018.solutions.trace.Trace
 import java.io.File
 import java.io.FileOutputStream
@@ -39,13 +40,18 @@ fun main(args: Array<String>) {
             Trace(commands, system)
         }
         "sections" -> Sections(targetModel, system)
+        "slices" -> Slices(targetModel, system)
         else -> throw IllegalArgumentException()
-
     }
+    log.info(solution::class.java.name)
+
     solution.solve()
 
     log.info { "Energy: " + system.currentState.energy }
+
     val success = system.currentState.matrix == targetModel
+
+
     log.info(if (success) "Success" else "Fail")
 
     if (success) {
@@ -53,7 +59,7 @@ fun main(args: Array<String>) {
 
         results.addNewResult(targetModelName, solutionName, system.currentState.energy, resultTraceFie)
 
-        val ofile = FileOutputStream(File(resultTraceFie))
+        val ofile = FileOutputStream(File(resultTraceFie).apply { this.parentFile.mkdirs() })
         system.commandTrace.forEach { it.write(ofile) }
 
         val writer = resultsFile.writer()

@@ -11,6 +11,8 @@ import java.nio.ByteOrder
 data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean> = PersistentHashMap.empty()) {
     val sizeCubed by lazy { size * size * size }
 
+    val height by lazy { data.keys.map { deconvertCoordinates(it).y }.max()!! }
+
     operator fun get(point: Point) = get(point.x, point.y, point.z)
 
     operator fun get(x: Int, y: Int, z: Int): Boolean = data.containsKey(convertCoordinates(x, y, z))
@@ -49,6 +51,9 @@ data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean
     }
 
     companion object {
+        private inline fun deconvertCoordinates(coord: Int) =
+                Point(coord % 256, (coord / 256) % 256, coord / (256 * 256))
+
         private inline fun convertCoordinates(x: Int, y: Int, z: Int) = x + 256 * y + 256 * 256 * z
 
         fun readMDL(bs: InputStream): Model {
