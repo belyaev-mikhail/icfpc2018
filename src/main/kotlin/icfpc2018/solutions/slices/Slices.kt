@@ -15,7 +15,6 @@ class Slices(val target: Model, val system: System) : Solution {
         val numBots = system.numBots
         val numColumns = target.size / numBots
         val lastColumn = target.size % numBots
-        flip()
         for (i in 0 until numColumns) {
             if (i > 0)
                 shift()
@@ -26,7 +25,7 @@ class Slices(val target: Model, val system: System) : Solution {
             shift()
             column()
         }
-        flip()
+        flipTo(Harmonics.LOW)
         merge(1)
         goToBase()
         halt()
@@ -52,6 +51,8 @@ class Slices(val target: Model, val system: System) : Solution {
             commands.add(Wait)
         system.timeStep(commands)
     }
+
+    private fun flipTo(harmonics: Harmonics) = if (system.currentState.harmonics != harmonics) flip() else Unit
 
     private fun up() {
         val commands = ArrayList<Command>()
@@ -83,6 +84,18 @@ class Slices(val target: Model, val system: System) : Solution {
     }
 
     private fun build() {
+        val isGrounded = system.currentState.matrix.isGrounded()
+        val timeStamp = system.timeStamp()
+        flipTo(Harmonics.HIGH)
+        atomicBuild()
+        if (!system.currentState.matrix.isGrounded()) return
+        if (!isGrounded) return
+        system.rollBackTo(timeStamp)
+        flipTo(Harmonics.LOW)
+        atomicBuild()
+    }
+
+    private fun atomicBuild() {
         val commands = ArrayList<Command>()
         for (bot in system.currentState.bots) {
             val diff = NearCoordDiff(0, -1, 0)

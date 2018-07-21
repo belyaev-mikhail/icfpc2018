@@ -12,14 +12,24 @@ class CommandCheckError(msg: String) : Exception(msg)
 
 class GroupCommandError : Exception()
 
+data class TimeStamp(val commandStamp: Int, val stateStamp: Int)
+
 open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
 
     val numBots: Int
         get() = currentState.bots.size
 
-    val commandTrace = ArrayList<Command>()
+    var commandTrace = ArrayList<Command>()
 
-    val stateTrace = arrayListOf(currentState)
+    var stateTrace = arrayListOf(currentState)
+
+    fun timeStamp() = TimeStamp(commandTrace.size, stateTrace.size)
+
+    fun rollBackTo(timeStamp: TimeStamp) {
+        commandTrace.subList(0, timeStamp.commandStamp)
+        stateTrace.subList(0, timeStamp.stateStamp)
+        currentState = stateTrace.last()
+    }
 
     open fun timeStep(commands: List<Command>): Boolean {
         if (currentState.bots.isEmpty()) throw ExecutionError()
