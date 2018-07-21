@@ -8,11 +8,14 @@ enum class Mode {
 
 class ExecutionError : Exception()
 
-class CommandCheckError : Exception()
+class CommandCheckError(msg: String) : Exception(msg)
 
 class GroupCommandError : Exception()
 
 open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
+
+    val numBots: Int
+        get() = currentState.bots.size
 
     val commandTrace = ArrayList<Command>()
 
@@ -24,8 +27,8 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
         var energy = currentState.energy
 
         energy += when (currentState.harmonics) {
-            Harmonics.LOW -> 30 * currentState.matrix.sizeCubed
-            Harmonics.HIGH -> 3 * currentState.matrix.sizeCubed
+            Harmonics.LOW -> 3 * currentState.matrix.sizeCubed
+            Harmonics.HIGH -> 30 * currentState.matrix.sizeCubed
         }
 
         energy += 20 * currentState.bots.size
@@ -38,12 +41,14 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
 
         for ((bot, cmd) in currentState.bots.zip(commands)) {
             when (cmd) {
-                is SimpleCommand -> {
-                    if (Mode.DEBUG == mode) if (!cmd.check(bot, execState)) throw CommandCheckError()
-                    execState = cmd.apply(bot, execState)
-                }
                 is FusionP, is FusionS -> {
                     ungroupedCommands.add(bot to cmd)
+                }
+                is SimpleCommand -> {
+                    if (Mode.DEBUG == mode) if (!cmd.check(bot, execState)) throw CommandCheckError(
+                            "For $cmd of $bot with $execState"
+                    )
+                    execState = cmd.apply(bot, execState)
                 }
             }
             commandTrace.add(cmd)
@@ -72,7 +77,9 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
         if (groupedCommands.size != fusionPrimary.size) throw GroupCommandError()
 
         for ((bots, cmd) in groupedCommands) {
-            if (Mode.DEBUG == mode) if (!cmd.check(bots, execState)) throw CommandCheckError()
+            if (Mode.DEBUG == mode) if (!cmd.check(bots, execState)) throw CommandCheckError(
+                    "For $cmd of $bots with $execState"
+            )
             execState = cmd.apply(bots, execState)
         }
 

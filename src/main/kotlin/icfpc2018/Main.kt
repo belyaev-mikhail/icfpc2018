@@ -13,6 +13,7 @@ import java.io.StringReader
 fun main(args: Array<String>) {
     val arguments = Arguments(args)
     val solutionName = arguments.getValue("solution") ?: throw IllegalArgumentException()
+    val isSubmit = arguments.isSubmit()
 
     val resultsFile = File("results/results.json")
     val resultReader = when {
@@ -57,16 +58,26 @@ fun main(args: Array<String>) {
         log.info(if (success) "Success" else "Fail")
 
         if (success) {
-            val resultTraceFie = "results/${targetModelName}_$solutionName.nbt"
+            val resultTraceFile = "results/${targetModelName}_$solutionName.nbt"
 
-            results.addNewResult(targetModelName, solutionName, system.currentState.energy, resultTraceFie)
+            results.addNewResult(targetModelName, solutionName, system.currentState.energy, resultTraceFile)
 
-            val ofile = FileOutputStream(File(resultTraceFie).apply { this.parentFile.mkdirs() })
+            val ofile = FileOutputStream(File(resultTraceFile).apply { this.parentFile.mkdirs() })
             system.commandTrace.forEach { it.write(ofile) }
+
+            if (isSubmit) {
+                val submitFile = "submit/${targetModelName}.nbt"
+                val submitstream = FileOutputStream(File(submitFile).apply { this.parentFile.mkdirs() })
+                system.commandTrace.forEach { it.write(submitstream) }
+            }
         }
     }
 
     val writer = resultsFile.writer()
     writer.write(results.toJson())
     writer.flush()
+
+    if (isSubmit) {
+        ZipWriter().createZip("submit/")
+    }
 }

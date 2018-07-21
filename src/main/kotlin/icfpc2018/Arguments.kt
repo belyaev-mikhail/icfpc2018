@@ -38,7 +38,13 @@ class Arguments(args: Array<String>) {
         to.isRequired = false
         options.addOption(to)
 
+        val submit = Option(null, "submit", false, "dump traces in format for submission")
+        submit.isRequired = false
+        options.addOption(submit)
     }
+
+
+    fun isSubmit() = cmd.hasOption("submit")
 
     fun getModelNums(): List<Int> {
         val model = getValue("model")?.toInt()

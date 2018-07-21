@@ -20,7 +20,11 @@ data class Point(val x: Int, val y: Int, val z: Int) {
     companion object {
         val ZERO = Point(0, 0, 0)
 
+        val ZERO_TO_ONE = listOf(0, 1)
+
         val MINUS_ONE_TO_ONE = listOf(-1, 0, 1)
+
+        val MINUS_ONE_AND_ONE = listOf(-1, 1)
     }
 }
 
@@ -59,18 +63,28 @@ open class CoordDiff(val dx: Int, val dy: Int, val dz: Int) {
 operator fun Point.plus(cd: CoordDiff) = Point(x + cd.dx, y + cd.dy, z + cd.dz)
 operator fun Point.minus(that: Point) = CoordDiff(this.x - that.x, this.y - that.y, this.z - that.z)
 
-fun Point.options(dx: List<Int>, dy: List<Int>, dz: List<Int>): Set<Point> =
-        (dx.map { copy(x = x + it, y = y, z = z) } +
-                dy.map { copy(x = x, y = y + it, z = z) } +
-                dz.map { copy(x = x, y = y, z = z + it) }).toSet()
+fun Point.options(dx: List<Int>, dy: List<Int>, dz: List<Int>): Set<Point> {
+    val res = mutableSetOf<Point>()
+    for (xx in dx) {
+        for (yy in dy) {
+            for (zz in dz) {
+                res.add(Point(x + xx, y + yy, z + zz))
+            }
+        }
+    }
+    res.remove(this)
+    return res
+}
+
+fun Point.inRange(model: Model): Boolean {
+    val indices = 0 until model.size
+    return x in indices &&
+            y in indices &&
+            z in indices
+}
 
 fun Set<Point>.inRange(model: Model) =
-        filterTo(mutableSetOf()) {
-            val indices = 0 until model.size
-            it.x in indices &&
-                    it.y in indices &&
-                    it.z in indices
-        }
+        filterTo(mutableSetOf()) { it.inRange(model) }
 
 open class LinearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
     enum class Axis { X, Y, Z }
@@ -102,11 +116,31 @@ open class LinearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
             }
         }
     }
+
+    companion object {
+        fun fromAxis(axis: Axis, length: Int): LinearCoordDiff {
+            return when (axis) {
+                Axis.X -> LinearCoordDiff(length, 0, 0)
+                Axis.Y -> LinearCoordDiff(0, length, 0)
+                Axis.Z -> LinearCoordDiff(0, 0, length)
+            }
+        }
+    }
 }
 
 class LongCoordDiff(dx: Int = 0, dy: Int = 0, dz: Int = 0) : LinearCoordDiff(dx, dy, dz) {
     init {
         assert(mlen <= 15)
+    }
+
+    companion object {
+        fun fromAxis(axis: Axis, length: Int): LongCoordDiff {
+            return when (axis) {
+                Axis.X -> LongCoordDiff(length, 0, 0)
+                Axis.Y -> LongCoordDiff(0, length, 0)
+                Axis.Z -> LongCoordDiff(0, 0, length)
+            }
+        }
     }
 }
 
@@ -119,5 +153,10 @@ class ShortCoordDiff(dx: Int = 0, dy: Int = 0, dz: Int = 0) : LinearCoordDiff(dx
 class NearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
     init {
         assert(mlen in 1..2 && clen == 1)
+    }
+
+    companion object {
+        fun fromPoints(origin: Point, target: Point) =
+                NearCoordDiff(target.x - origin.x, target.y - origin.y, target.z - origin.z)
     }
 }
