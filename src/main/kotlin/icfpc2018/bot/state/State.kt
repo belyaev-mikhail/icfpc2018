@@ -1,7 +1,6 @@
 package icfpc2018.bot.state
 
 import icfpc2018.bot.state.LinearCoordDiff.Axis.*
-import icfpc2018.solutions.sections.indices
 import org.organicdesign.fp.collections.PersistentTreeSet
 import java.util.*
 import kotlin.math.abs
@@ -119,6 +118,16 @@ open class LinearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
 class LongCoordDiff(dx: Int = 0, dy: Int = 0, dz: Int = 0) : LinearCoordDiff(dx, dy, dz) {
     init {
         assert(mlen <= 15)
+    }
+
+    companion object {
+        fun fromAxis(axis: Axis, length: Int): LongCoordDiff {
+            return when (axis) {
+                Axis.X -> LongCoordDiff(length, 0, 0)
+                Axis.Y -> LongCoordDiff(0, length, 0)
+                Axis.Z -> LongCoordDiff(0, 0, length)
+            }
+        }
     }
 }
 
