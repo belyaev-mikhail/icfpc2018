@@ -1,9 +1,7 @@
 package icfpc2018.bot.state
 
-import icfpc2018.solutions.sections.indices
 import org.apache.commons.compress.utils.BitInputStream
 import org.organicdesign.fp.collections.PersistentHashMap
-import org.organicdesign.fp.collections.PersistentHashSet
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -13,38 +11,49 @@ import java.nio.ByteOrder
 data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean> = PersistentHashMap.empty()) {
     val sizeCubed by lazy { size * size * size }
 
+    val height by lazy { data.keys.map { deconvertCoordinates(it).y }.max()!! }
+
     operator fun get(point: Point) = get(point.x, point.y, point.z)
 
     operator fun get(x: Int, y: Int, z: Int): Boolean = data.containsKey(convertCoordinates(x, y, z))
 
     fun set(x: Int, y: Int, z: Int) = set(Point(x, y, z))
 
-    fun set(point: Point) =
-            copy(data = data.assoc(point.index, point.isTriviallyGrounded)).propagateGroundness(point)
+    fun set(point: Point) = run {
+        val res = copy(data = data.assoc(point.index, point.isTriviallyGrounded))
+        val mut = res.data.mutable()
+        res.propagateGroundness(point, mut)
+        res.copy(data = mut.immutable())
+    }
 
     fun isGrounded(x: Int, y: Int, z: Int) = data[convertCoordinates(x, y, z)] == true
     @JvmName("pleasePleasePleaseGoToHellWithYourNameAmbiguity")
     fun isGrounded(point: Point) = data[point.index] == true
 
     private val Point.isTriviallyGrounded inline get() = y == 0
-    private val Point.index inline get() = convertCoordinates(x,y,z)
+    private val Point.index inline get() = convertCoordinates(x, y, z)
     private val Point.inBounds inline get() = x in 0 until size && y in 0 until size && z in 0 until size
 
-    private fun propagateGroundness(p: Point, mutableData: PersistentHashMap.MutableHashMap<Int, Boolean> = data.mutable()): Model {
-        val neighbors = p.options(listOf(-1, 1), listOf(-1, 1), listOf(-1, 1)).filter { it.inBounds }
+    private fun propagateGroundness(p: Point, mutableData: PersistentHashMap.MutableHashMap<Int, Boolean> = data.mutable()) {
+        val neighbors = p.options(listOf(-1, 1), listOf(-1, 1), listOf(-1, 1)).filter {
+            it.inBounds && mutableData[it.index] != null
+        }
         val grounded = p.isTriviallyGrounded || mutableData[p.index] == true || neighbors.any { mutableData[it.index] == true }
-        if(!grounded) return copy(data = mutableData.immutable())
+        if (!grounded) return
 
-        mutableData[p.index] = true
+        mutableData.assoc(p.index, true)
         val notGroundedNeighbors = neighbors.filterNot { it.isTriviallyGrounded || mutableData[it.index] == true }
-        for(neighbor in notGroundedNeighbors) {
-            mutableData[neighbor.index] = true
+        for (neighbor in notGroundedNeighbors) {
+            mutableData.assoc(neighbor.index, true)
             propagateGroundness(neighbor, mutableData)
         }
-        return copy(data = mutableData.immutable())
+        return
     }
 
     companion object {
+        private inline fun deconvertCoordinates(coord: Int) =
+                Point(coord % 256, (coord / 256) % 256, coord / (256 * 256))
+
         private inline fun convertCoordinates(x: Int, y: Int, z: Int) = x + 256 * y + 256 * 256 * z
 
         fun readMDL(bs: InputStream): Model {
@@ -73,18 +82,18 @@ data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean
 
         os.write(size)
 
-        for(ix in 0 until size) {
-            for(iy in 0 until size) {
-                for(iz in 0 until size) {
-                    byte += (if(get(ix, iy, iz)) "1" else "0")
-                    if(byte.length == 8) {
+        for (ix in 0 until size) {
+            for (iy in 0 until size) {
+                for (iz in 0 until size) {
+                    byte += (if (get(ix, iy, iz)) "1" else "0")
+                    if (byte.length == 8) {
                         os.write(byte.reversed().toInt(2))
                         byte = ""
                     }
                 }
             }
         }
-        if(byte.isNotEmpty()) os.write(byte.reversed().toInt(2))
+        if (byte.isNotEmpty()) os.write(byte.reversed().toInt(2))
     }
 }
 
