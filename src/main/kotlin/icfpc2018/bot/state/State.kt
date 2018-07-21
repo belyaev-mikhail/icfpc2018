@@ -21,7 +21,11 @@ data class Point(val x: Int, val y: Int, val z: Int) {
     companion object {
         val ZERO = Point(0, 0, 0)
 
+        val ZERO_TO_ONE = listOf(0, 1)
+
         val MINUS_ONE_TO_ONE = listOf(-1, 0, 1)
+
+        val MINUS_ONE_AND_ONE = listOf(-1, 1)
     }
 }
 
@@ -119,5 +123,10 @@ class ShortCoordDiff(dx: Int = 0, dy: Int = 0, dz: Int = 0) : LinearCoordDiff(dx
 class NearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
     init {
         assert(mlen in 1..2 && clen == 1)
+    }
+
+    companion object {
+        fun fromPoints(origin: Point, target: Point) =
+                NearCoordDiff(target.x - origin.x, target.y - origin.y, target.z - origin.z)
     }
 }
