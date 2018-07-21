@@ -12,13 +12,13 @@ class CommandCheckError : Exception()
 
 class GroupCommandError : Exception()
 
-class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
+open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
 
     val commandTrace = ArrayList<Command>()
 
     val stateTrace = arrayListOf(currentState)
 
-    fun timeStep(commands: List<Command>) {
+    open fun timeStep(commands: List<Command>): Boolean {
         if (currentState.bots.isEmpty()) throw ExecutionError()
 
         var energy = currentState.energy
@@ -79,5 +79,7 @@ class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
         stateTrace.add(execState)
 
         currentState = execState
+
+        return true
     }
 }
