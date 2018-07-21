@@ -60,13 +60,14 @@ fun main(args: Array<String>) {
 
             results.addNewResult(targetModelName, solutionName, system.currentState.energy, resultTraceFile)
 
-            val ofile = FileOutputStream(File(resultTraceFile).apply { this.parentFile.mkdirs() })
-            system.commandTrace.forEach { it.write(ofile) }
-
             if (isSubmit) {
                 val submitFile = "submit/${targetModelName}.nbt"
+                log.info("Writing $submitFile")
                 val submitstream = FileOutputStream(File(submitFile).apply { this.parentFile.mkdirs() })
                 system.commandTrace.forEach { it.write(submitstream) }
+            } else {
+                val ofile = FileOutputStream(File(resultTraceFile).apply { this.parentFile.mkdirs() })
+                system.commandTrace.forEach { it.write(ofile) }
             }
         }
     }

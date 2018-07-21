@@ -56,7 +56,7 @@ class Arguments(args: Array<String>) {
         return (from..to).toList()
     }
 
-    fun getModels(): List<String> = getModelNums().map { "LA%03d".format(it) }
+    fun getModels(): List<String> = getModelNums().map { "FA%03d".format(it) }
 
     fun getValue(name: String): String? = cmd.getOptionValue(name)
     fun getValue(name: String, default: String) = getValue(name) ?: default
