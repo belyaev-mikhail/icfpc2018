@@ -75,13 +75,15 @@ fun Point.options(dx: List<Int>, dy: List<Int>, dz: List<Int>): Set<Point> {
     return res
 }
 
+fun Point.inRange(model: Model): Boolean {
+    val indices = 0 until model.size
+    return x in indices &&
+            y in indices &&
+            z in indices
+}
+
 fun Set<Point>.inRange(model: Model) =
-        filterTo(mutableSetOf()) {
-            val indices = 0 until model.size
-            it.x in indices &&
-                    it.y in indices &&
-                    it.z in indices
-        }
+        filterTo(mutableSetOf()) { it.inRange(model) }
 
 open class LinearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
     enum class Axis { X, Y, Z }
