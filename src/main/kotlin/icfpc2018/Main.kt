@@ -8,6 +8,7 @@ import icfpc2018.solutions.groundedSlices.GroundedSlices
 import icfpc2018.solutions.sections.Sections
 import icfpc2018.solutions.slices.Slices
 import icfpc2018.solutions.trace.Trace
+import icfpc2018.solutions.tripleSlices.TripleSlices
 import java.io.File
 import java.io.FileOutputStream
 import java.io.StringReader
@@ -47,6 +48,7 @@ fun main(args: Array<String>) {
             "sections" -> Sections(targetModel, system)
             "slices" -> Slices(targetModel, system)
             "grounded_slices" -> GroundedSlices(targetModel, system)
+            "triple_slices" -> TripleSlices(targetModel, system)
             else -> throw IllegalArgumentException()
         }
         log.info(solution::class.java.name)
