@@ -1,5 +1,7 @@
 package icfpc2018.bot.commands
 
+import icfpc2018.bot.commands.CheckError.Companion.OutOfRangeError
+import icfpc2018.bot.commands.CheckError.Companion.PositionFullError
 import icfpc2018.bot.state.*
 import icfpc2018.bot.state.Harmonics.HIGH
 import icfpc2018.bot.state.Harmonics.LOW
@@ -9,8 +11,8 @@ import org.apache.commons.compress.utils.BitInputStream
 import org.organicdesign.fp.collections.PersistentTreeSet
 import java.io.InputStream
 import java.io.OutputStream
+import java.lang.Math.pow
 import java.nio.ByteOrder
-import java.util.*
 
 fun Int.toBinary(size: Int) = ("0".repeat(32) + toString(2)).takeLast(size)
 fun Long.toBinary(size: Int = 8) = ("0".repeat(64) + toString(2)).takeLast(size)
@@ -221,19 +223,35 @@ interface Command {
 interface SimpleCommand : Command {
     fun apply(bot: Bot, state: State): State = state
 
-    fun volatileCoords(bot: Bot) = listOf(bot.position)
+    fun volatileCoords(bot: Bot) = setOf(bot.position)
 
-    fun check(bot: Bot, state: State) = true
+    fun check(bot: Bot, state: State) {}
 }
 
-interface GroupCommand {
+interface GroupCommand : Command {
     fun apply(bots: List<Bot>, state: State): State = state
 
-    fun volatileCoords(bots: List<Bot>) = bots.map { it.position }
+    fun volatileCoords(bots: List<Bot>) = bots.map { it.position }.toSet()
 
-    fun check(bots: List<Bot>, state: State) = true
+    fun check(bots: List<Bot>, state: State) {}
 
     val innerCommands: List<SimpleCommand>
+}
+
+data class CheckError(val from: Command, val msg: String) : Exception(msg) {
+    companion object {
+        fun OutOfRangeError(from: Command, pos: Point, state: State) =
+                CheckError(
+                        from,
+                        "$pos out of range for [${state.matrix.size}]"
+                )
+
+        fun PositionFullError(from: Command, pos: Point) =
+                CheckError(
+                        from,
+                        "Position $pos is Full"
+                )
+    }
 }
 
 object Halt : SimpleCommand {
@@ -244,12 +262,17 @@ object Halt : SimpleCommand {
     override fun apply(bot: Bot, state: State): State =
             state.copy(bots = PersistentTreeSet.empty())
 
-    override fun check(bot: Bot, state: State): Boolean {
-        return when {
-            bot.position != Point.ZERO -> false
-            state.bots != sortedSetOf(bot) -> false
-            state.harmonics != LOW -> false
-            else -> true
+    override fun check(bot: Bot, state: State) {
+        when {
+            bot.position != Point.ZERO -> throw CheckError(
+                    this, "Bot position is ${bot.position}"
+            )
+            bot in state.bots && 1 == state.bots.size -> throw CheckError(
+                    this, "Bot set is ${state.bots}"
+            )
+            state.harmonics != LOW -> throw CheckError(
+                    this, "State harmonics is ${state.harmonics}"
+            )
         }
     }
 }
@@ -280,16 +303,19 @@ data class SMove(val lld: LongCoordDiff) : SimpleCommand {
                     bots = state.bots - bot + bot.copy(position = bot.position + lld)
             )
 
-    override fun volatileCoords(bot: Bot): List<Point> =
+    override fun volatileCoords(bot: Bot): Set<Point> =
             lld.affectedCoords(bot.position)
 
-    override fun check(bot: Bot, state: State): Boolean {
+    override fun check(bot: Bot, state: State) {
         val newPos = bot.position + lld
-        if (!newPos.inRange(state.matrix)) return false
-        for (ac in volatileCoords(bot)) {
-            if (state.matrix[ac]) return false
+        if (!newPos.inRange(state.matrix)) throw OutOfRangeError(
+                this, newPos, state
+        )
+        for (vc in volatileCoords(bot)) {
+            if (state.matrix[vc]) throw CheckError(
+                    this, "Position $vc is Full"
+            )
         }
-        return true
     }
 }
 
@@ -300,51 +326,66 @@ data class LMove(val sld1: ShortCoordDiff, val sld2: ShortCoordDiff) : SimpleCom
                     bots = state.bots - bot + bot.copy(position = bot.position + sld1 + sld2)
             )
 
-    override fun volatileCoords(bot: Bot): List<Point> =
-            sld1.affectedCoords(bot.position) + sld2.affectedCoords(bot.position + sld1)
+    override fun volatileCoords(bot: Bot): Set<Point> =
+            sld1.affectedCoords(bot.position) +
+                    sld2.affectedCoords(bot.position + sld1)
 
-    override fun check(bot: Bot, state: State): Boolean {
+    override fun check(bot: Bot, state: State) {
         val newPos1 = bot.position + sld1
-        if (!newPos1.inRange(state.matrix)) return false
+        if (!newPos1.inRange(state.matrix)) throw OutOfRangeError(
+                this, newPos1, state
+        )
         val newPos2 = newPos1 + sld2
-        if (!newPos2.inRange(state.matrix)) return false
-        for (ac in volatileCoords(bot)) {
-            if (state.matrix[ac]) return false
+        if (!newPos2.inRange(state.matrix)) throw OutOfRangeError(
+                this, newPos2, state
+        )
+        for (vc in volatileCoords(bot)) {
+            if (state.matrix[vc]) throw PositionFullError(
+                    this, vc
+            )
         }
-        return true
     }
 }
 
 data class Fission(val nd: NearCoordDiff, val m: Int) : SimpleCommand {
     override fun apply(bot: Bot, state: State): State {
-        val bids = bot.seeds.withIndex().groupBy { (idx, _) ->
-            when (idx) {
-                0 -> 0
-                in 1..m -> 1
-                else -> 2
-            }
-        }
+        val bids = bot.seeds
+                .withIndex()
+                .filter { (idx, seed) -> idx in setOf(0, 1, m + 1) }
+
+        val (newId, from, to) =
+                bids.map { it.value }
+
         return state.copy(
                 energy = state.energy + 24,
-                bots = state.bots - bot
-                        + bot.copy(seeds = TreeSet(bids.getOrDefault(2, emptyList()).map { it.value }))
+                bots = state.bots
+                        - bot
+                        + bot.copy(seeds = bot.seeds.subSet(from, to))
                         + Bot(
-                        id = bot.seeds.first(),
+                        id = newId,
                         position = bot.position + nd,
-                        seeds = TreeSet(bids.getOrDefault(1, emptyList()).map { it.value }))
+                        seeds = bot.seeds.tailSet(to)
+                )
         )
     }
 
-    override fun volatileCoords(bot: Bot): List<Point> =
-            listOf(bot.position, bot.position + nd)
+    override fun volatileCoords(bot: Bot): Set<Point> =
+            setOf(bot.position, bot.position + nd)
 
-    override fun check(bot: Bot, state: State): Boolean {
-        if (bot.seeds.isEmpty()) return false
+    override fun check(bot: Bot, state: State) {
+        if (bot.seeds.isEmpty()) throw CheckError(
+                this, "Bot seeds are empty"
+        )
         val newPos = bot.position + nd
-        if (!newPos.inRange(state.matrix)) return false
-        if (state.matrix[newPos]) return false
-        if (bot.seeds.size < m + 1) return false
-        return true
+        if (!newPos.inRange(state.matrix)) throw OutOfRangeError(
+                this, newPos, state
+        )
+        if (state.matrix[newPos]) throw PositionFullError(
+                this, newPos
+        )
+        if (bot.seeds.size < m + 1) throw CheckError(
+                this, "Need ${m + 1} seeds for fission, have ${bot.seeds.size}"
+        )
     }
 }
 
@@ -362,28 +403,43 @@ data class Fill(val nd: NearCoordDiff) : SimpleCommand {
         )
     }
 
-    override fun volatileCoords(bot: Bot): List<Point> =
-            listOf(bot.position, bot.position + nd)
+    override fun volatileCoords(bot: Bot): Set<Point> =
+            setOf(bot.position, bot.position + nd)
 
-    override fun check(bot: Bot, state: State): Boolean {
+    override fun check(bot: Bot, state: State) {
         val newPos = bot.position + nd
-        if (!newPos.inRange(state.matrix)) return false
-        return true
+        if (!newPos.inRange(state.matrix)) throw OutOfRangeError(
+                this, newPos, state
+        )
     }
 }
 
 data class Void(val nd: NearCoordDiff) : SimpleCommand {
-    override fun apply(bot: Bot, state: State): State = TODO()
-
-    override fun volatileCoords(bot: Bot): List<Point> =
-            listOf(bot.position, bot.position + nd)
-
-    override fun check(bot: Bot, state: State): Boolean {
+    override fun apply(bot: Bot, state: State): State {
         val newPos = bot.position + nd
-        if (!newPos.inRange(state.matrix)) return false
-        return true
+        val (newEnergy, shouldUpdate) = if (state.matrix[newPos]) {
+            state.energy - 12 to true
+        } else {
+            state.energy + 3 to false
+        }
+        return state.copy(
+                energy = newEnergy,
+                matrix = if (shouldUpdate) state.matrix.unset(newPos) else state.matrix
+        )
+    }
+
+    override fun volatileCoords(bot: Bot): Set<Point> =
+            setOf(bot.position, bot.position + nd)
+
+    override fun check(bot: Bot, state: State) {
+        val newPos = bot.position + nd
+        if (!newPos.inRange(state.matrix)) throw OutOfRangeError(
+                this, newPos, state
+        )
     }
 }
+
+// TODO: Add fusion id
 
 data class FusionP(val nd: NearCoordDiff) : SimpleCommand {
     override fun apply(bot: Bot, state: State): State = TODO()
@@ -402,31 +458,201 @@ data class FusionT(val p: FusionP, val s: FusionS) : GroupCommand {
         val (botP, botS) = bots
         return state.copy(
                 energy = state.energy - 24,
-                bots = state.bots - botS
+                bots = state.bots
+                        - botS
                         - botP
-                        + botP.copy(seeds = TreeSet(botP.seeds + botS.id + botP.seeds))
+                        + botP.copy(seeds = botP.seeds.put(botS.id).union(botS.seeds))
         )
     }
 
-    override fun check(bots: List<Bot>, state: State): Boolean {
-        if (bots.size != 2) return false
+    override fun check(bots: List<Bot>, state: State) {
+        if (bots.size != 2) throw CheckError(
+                this, "Wrong bots for fusion: $bots"
+        )
         val (botP, botS) = bots
-        if (botP.position + p.nd != botS.position) return false
-        if (botP.position != botS.position + s.nd) return false
-        return true
+        if (botP.position + p.nd != botS.position) throw CheckError(
+                this, "$botP + $p != $botS"
+        )
+        if (botP.position != botS.position + s.nd) throw CheckError(
+                this, "$botS + $s != $botP"
+        )
     }
 }
 
 data class GFill(val nd: NearCoordDiff, val fd: FarCoordDiff) : SimpleCommand {
     override fun apply(bot: Bot, state: State): State = TODO()
-    override fun volatileCoords(bot: Bot): List<Point> = TODO()
-    override fun check(bot: Bot, state: State): Boolean = TODO()
 }
+
+data class GFillT(val components: List<GFill>) : GroupCommand {
+    override val innerCommands: List<SimpleCommand>
+        get() = components
+
+    override fun apply(bots: List<Bot>, state: State): State {
+        val bot = bots.first()
+        val gFill = components.first()
+        val region = bot.position + gFill.nd to bot.position + gFill.nd + gFill.fd
+
+        var res = state
+        for (coord in region.coords()) {
+            val (newEnergy, shouldUpdate) = if (state.matrix[coord]) {
+                state.energy + 6 to false
+            } else {
+                state.energy + 12 to true
+            }
+            res = res.copy(
+                    energy = newEnergy,
+                    matrix = if (shouldUpdate) state.matrix.set(coord) else state.matrix
+            )
+        }
+        return res
+    }
+
+    override fun volatileCoords(bots: List<Bot>): Set<Point> {
+        val res = bots.map { it.position }.toSet()
+        val bot = bots.first()
+        val gFill = components.first()
+        val region = bot.position + gFill.nd to bot.position + gFill.nd + gFill.fd
+        return res + region.coords()
+    }
+
+    override fun check(bots: List<Bot>, state: State) {
+        if (bots.size == 1) throw CheckError(
+                this, "Fuck you"
+        )
+
+        if (bots.size != components.size) throw CheckError(
+                this, "Difference in bot / component sizes"
+        )
+
+        val bot = bots.first()
+        val gFill = components.first()
+        val region = (bot.position + gFill.nd to bot.position + gFill.nd + gFill.fd).normalize()
+
+        if (bots.size != pow(2.0, region.dim().toDouble()).toInt()) throw CheckError(
+                this, "${bots.size} bots are not valid for $region"
+        )
+
+        val zipped = bots.zip(components)
+
+        for ((b, gf) in zipped) {
+            val near = b.position + gf.nd
+            val far = near + gf.fd
+
+            if (!near.inRange(state.matrix)) throw OutOfRangeError(
+                    this, near, state
+            )
+            if (!far.inRange(state.matrix)) throw OutOfRangeError(
+                    this, far, state
+            )
+
+            val r = (near to far).normalize()
+            if (region != r) throw CheckError(
+                    this, "$bot:$gFill and $b:$gf have different regions"
+            )
+        }
+
+        if (bots.any { it.position in region }) throw CheckError(
+                this, "Some of the $bots are inside $region"
+        )
+
+        for ((b1, gf1) in zipped) {
+            for ((b2, gf2) in zipped) {
+                if (b1.id == b2.id) continue
+                if (b1.position + gf1.nd == b2.position + gf2.nd) throw CheckError(
+                        this, "$b1:$gf1 and $b2:$gf2 are conflicting"
+                )
+            }
+        }
+    }
+}
+
 data class GVoid(val nd: NearCoordDiff, val fd: FarCoordDiff) : SimpleCommand {
     override fun apply(bot: Bot, state: State): State = TODO()
-    override fun volatileCoords(bot: Bot): List<Point> = TODO()
-    override fun check(bot: Bot, state: State): Boolean = TODO()
 }
+
+data class GVoidT(val components: List<GVoid>) : GroupCommand {
+    override val innerCommands: List<SimpleCommand>
+        get() = components
+
+    override fun apply(bots: List<Bot>, state: State): State {
+        val bot = bots.first()
+        val gVoid = components.first()
+        val region = bot.position + gVoid.nd to bot.position + gVoid.nd + gVoid.fd
+
+        var res = state
+        for (coord in region.coords()) {
+            val (newEnergy, shouldUpdate) = if (state.matrix[coord]) {
+                state.energy - 12 to true
+            } else {
+                state.energy + 3 to false
+            }
+            res = res.copy(
+                    energy = newEnergy,
+                    matrix = if (shouldUpdate) state.matrix.unset(coord) else state.matrix
+            )
+        }
+        return res
+    }
+
+    override fun volatileCoords(bots: List<Bot>): Set<Point> {
+        val res = bots.map { it.position }.toSet()
+        val bot = bots.first()
+        val gVoid = components.first()
+        val region = bot.position + gVoid.nd to bot.position + gVoid.nd + gVoid.fd
+        return res + region.coords()
+    }
+
+    override fun check(bots: List<Bot>, state: State) {
+        if (bots.size == 1) throw CheckError(
+                this, "Fuck you"
+        )
+
+        if (bots.size != components.size) throw CheckError(
+                this, "Difference in bot / component sizes"
+        )
+
+        val bot = bots.first()
+        val gVoid = components.first()
+        val region = (bot.position + gVoid.nd to bot.position + gVoid.nd + gVoid.fd).normalize()
+
+        if (bots.size != pow(2.0, region.dim().toDouble()).toInt()) throw CheckError(
+                this, "${bots.size} bots are not valid for $region"
+        )
+
+        val zipped = bots.zip(components)
+
+        for ((b, gv) in zipped) {
+            val near = b.position + gv.nd
+            val far = near + gv.fd
+
+            if (!near.inRange(state.matrix)) throw OutOfRangeError(
+                    this, near, state
+            )
+            if (!far.inRange(state.matrix)) throw OutOfRangeError(
+                    this, far, state
+            )
+
+            val r = (near to far).normalize()
+            if (region != r) throw CheckError(
+                    this, "$bot:$gVoid and $b:$gv have different regions"
+            )
+        }
+
+        if (bots.any { it.position in region }) throw CheckError(
+                this, "Some of the $bots are inside $region"
+        )
+
+        for ((b1, gv1) in zipped) {
+            for ((b2, gv2) in zipped) {
+                if (b1.id == b2.id) continue
+                if (b1.position + gv1.nd == b2.position + gv2.nd) throw CheckError(
+                        this, "$b1:$gv1 and $b2:$gv2 are conflicting"
+                )
+            }
+        }
+    }
+}
+
 
 val allPossibleMoves = (1..15).flatMap {
     listOf(SMove(LongCoordDiff(dx = it)),

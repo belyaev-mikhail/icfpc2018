@@ -1,16 +1,18 @@
 package icfpc2018.bot.state
 
 import icfpc2018.bot.state.LinearCoordDiff.Axis.*
+import org.organicdesign.fp.collections.ImSortedSet
 import org.organicdesign.fp.collections.PersistentTreeSet
-import java.util.*
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sign
 
 enum class Harmonics {
     LOW, HIGH
 }
 
-data class Bot(val id: Int, val position: Point, val seeds: SortedSet<Int>) : Comparable<Bot> {
+data class Bot(val id: Int, val position: Point, val seeds: ImSortedSet<Int>) : Comparable<Bot> {
     override fun compareTo(other: Bot): Int = id - other.id
 }
 
@@ -70,7 +72,7 @@ fun Point.immediateNeighbours() = listOf(
         Point(x, y - 1, z),
         Point(x, y, z + 1),
         Point(x, y, z - 1)
-        )
+)
 
 fun Point.options(dx: List<Int>, dy: List<Int>, dz: List<Int>): Set<Point> {
     val res = mutableSetOf<Point>()
@@ -116,12 +118,12 @@ open class LinearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
         assert(1 == xZero + yZero + zZero)
     }
 
-    fun affectedCoords(origin: Point): List<Point> {
+    fun affectedCoords(origin: Point): Set<Point> {
         with(origin) {
             return when (axis) {
-                X -> (0..dx).map { Point(x + it, y, z) }
-                Y -> (0..dy).map { Point(x, y + it, z) }
-                Z -> (0..dz).map { Point(x, y, z + it) }
+                X -> (0..dx).map { Point(x + it, y, z) }.toSet()
+                Y -> (0..dy).map { Point(x, y + it, z) }.toSet()
+                Z -> (0..dz).map { Point(x, y, z + it) }.toSet()
             }
         }
     }
@@ -172,8 +174,47 @@ class NearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
 
 class FarCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
     init {
-        assert(dx in -30..30)
-        assert(dy in -30..30)
-        assert(dz in -30..30)
+        assert(clen in 1..30)
     }
+}
+
+typealias Region = Pair<Point, Point>
+
+fun Region.normalize(): Region {
+    val fromX = min(first.x, second.x)
+    val toX = max(first.x, second.x)
+    val fromY = min(first.y, second.y)
+    val toY = max(first.y, second.y)
+    val fromZ = min(first.z, second.z)
+    val toZ = max(first.z, second.z)
+
+    return Point(fromX, fromY, fromZ) to Point(toX, toY, toZ)
+}
+
+fun Region.coords(): List<Point> {
+    val res = mutableListOf<Point>()
+    val norm = normalize()
+    for (x in norm.first.x..norm.second.x) {
+        for (y in norm.first.y..norm.second.y) {
+            for (z in norm.first.z..norm.second.z) {
+                res.add(Point(x, y, z))
+            }
+        }
+    }
+    return res
+}
+
+operator fun Region.contains(p: Point): Boolean {
+    val norm = normalize()
+    return p.x in norm.first.x..norm.second.x &&
+            p.y in norm.first.y..norm.second.y &&
+            p.z in norm.first.z..norm.second.z
+}
+
+fun Region.dim(): Int {
+    var res = 0
+    if (first.x != second.x) res++
+    if (first.y != second.y) res++
+    if (first.z != second.z) res++
+    return res
 }

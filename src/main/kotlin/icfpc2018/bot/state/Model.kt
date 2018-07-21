@@ -46,6 +46,8 @@ data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean
         res.copy(data = mut.immutable(), numGrounded = newNumGrounded)
     }
 
+    fun unset(point: Point): Model = TODO()
+
     fun isGrounded(x: Int, y: Int, z: Int) = data[convertCoordinates(x, y, z)] == true
     @JvmName("pleasePleasePleaseGoToHellWithYourNameAmbiguity")
     fun isGrounded(point: Point) = data[point.index] == true
