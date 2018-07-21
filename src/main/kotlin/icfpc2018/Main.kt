@@ -54,7 +54,9 @@ fun main(args: Array<String>) {
 
     log.info(if (success) "Success" else "Fail")
 
-    if (success) {
+    system.currentState.matrix.writeMDL(FileOutputStream(File("testModel.mdl")))
+
+    if (true) {
         val resultTraceFie = "results/${targetModelName}_$solutionName.nbt"
 
         results.addNewResult(targetModelName, solutionName, system.currentState.energy, resultTraceFie)

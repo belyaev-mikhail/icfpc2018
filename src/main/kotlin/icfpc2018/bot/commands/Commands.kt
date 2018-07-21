@@ -348,7 +348,8 @@ data class FusionT(val p: FusionP, val s: FusionS) : GroupCommand {
     override fun check(bots: List<Bot>, state: State): Boolean {
         if (bots.size != 2) return false
         val (botP, botS) = bots
-        if (botP.position + p.nd != botS.position + s.nd) return false
+        if (botP.position + p.nd != botS.position) return false
+        if (botP.position != botS.position + s.nd) return false
         return true
     }
 }
