@@ -22,7 +22,10 @@ data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean
     fun set(x: Int, y: Int, z: Int) = set(Point(x, y, z))
 
     fun set(point: Point) = run {
-        val res = copy(data = data.assoc(point.index, point.isTriviallyGrounded))
+        val isAlreadyGrounded = isGrounded(point)
+        val isTriviallyGrounded = point.isTriviallyGrounded
+        val res = copy(data = data.assoc(point.index, point.isTriviallyGrounded),
+                                numGrounded = if(!isAlreadyGrounded && isTriviallyGrounded) numGrounded + 1 else numGrounded)
         val mut = res.data.mutable()
         val newNumGrounded = res.propagateGroundness(point, mut)
         res.copy(data = mut.immutable(), numGrounded = newNumGrounded)
