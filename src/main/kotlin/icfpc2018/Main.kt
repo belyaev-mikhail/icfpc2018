@@ -1,9 +1,9 @@
 package icfpc2018
 
 import icfpc2018.bot.commands.Command
-import icfpc2018.bot.commands.Flip
 import icfpc2018.bot.state.*
 import icfpc2018.bot.util.persistentTreeSetOf
+import icfpc2018.solutions.groundedBoundedSlices.GroundedBoundedSlices
 import icfpc2018.solutions.groundedSlices.GroundedSlices
 import icfpc2018.solutions.sections.Sections
 import icfpc2018.solutions.slices.Slices
@@ -47,6 +47,7 @@ fun main(args: Array<String>) {
             "sections" -> Sections(targetModel, system)
             "slices" -> Slices(targetModel, system)
             "grounded_slices" -> GroundedSlices(targetModel, system)
+            "grounded_bounded_slices" -> GroundedBoundedSlices(targetModel, system)
             else -> throw IllegalArgumentException()
         }
         log.info(solution::class.java.name)
@@ -59,9 +60,6 @@ fun main(args: Array<String>) {
 
 
         log.info(if (success) "Success" else "Fail")
-
-        log.info(system.commandTrace.size.toString())
-        log.info(system.commandTrace.withIndex().filter { it.value === Flip }.toString())
 
         if (success) {
             val resultTraceFile = "results/${targetModelName}_$solutionName.nbt"
