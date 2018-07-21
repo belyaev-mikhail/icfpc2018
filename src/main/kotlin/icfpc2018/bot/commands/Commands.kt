@@ -324,6 +324,19 @@ data class Fill(val nd: NearCoordDiff) : SimpleCommand {
     }
 }
 
+data class Void(val nd: NearCoordDiff) : SimpleCommand {
+    override fun apply(bot: Bot, state: State): State = TODO()
+
+    override fun volatileCoords(bot: Bot): List<Point> =
+            listOf(bot.position, bot.position + nd)
+
+    override fun check(bot: Bot, state: State): Boolean {
+        val newPos = bot.position + nd
+        if (!newPos.inRange(state.matrix)) return false
+        return true
+    }
+}
+
 data class FusionP(val nd: NearCoordDiff) : SimpleCommand {
     override fun apply(bot: Bot, state: State): State = TODO()
 }
@@ -354,6 +367,17 @@ data class FusionT(val p: FusionP, val s: FusionS) : GroupCommand {
         if (botP.position != botS.position + s.nd) return false
         return true
     }
+}
+
+data class GFill(val nd: NearCoordDiff, val fd: FarCoordDiff) : SimpleCommand {
+    override fun apply(bot: Bot, state: State): State = TODO()
+    override fun volatileCoords(bot: Bot): List<Point> = TODO()
+    override fun check(bot: Bot, state: State): Boolean = TODO()
+}
+data class GVoid(val nd: NearCoordDiff, val fd: FarCoordDiff) : SimpleCommand {
+    override fun apply(bot: Bot, state: State): State = TODO()
+    override fun volatileCoords(bot: Bot): List<Point> = TODO()
+    override fun check(bot: Bot, state: State): Boolean = TODO()
 }
 
 val allPossibleMoves = (1..15).flatMap {
