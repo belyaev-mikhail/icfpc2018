@@ -140,14 +140,14 @@ class GroundedBoundedSlices(val target: Model, val system: System) : Solution {
 
     private fun build() {
         val timeStamp = system.timeStamp()
-        atomicBuild()
-        if (system.currentState.matrix.isEverybodyGrounded) {
+        try {
+            atomicBuild()
             flipTo(Harmonics.LOW)
-            return
+        } catch (ge: GroundError) {
+            system.rollBackTo(timeStamp)
+            flipTo(Harmonics.HIGH)
+            atomicBuild()
         }
-        system.rollBackTo(timeStamp)
-        flipTo(Harmonics.HIGH)
-        atomicBuild()
     }
 
     private fun atomicBuild() {
