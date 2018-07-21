@@ -115,6 +115,16 @@ open class LinearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
             }
         }
     }
+
+    companion object {
+        fun fromAxis(axis: Axis, length: Int): LinearCoordDiff {
+            return when (axis) {
+                Axis.X -> LinearCoordDiff(length, 0, 0)
+                Axis.Y -> LinearCoordDiff(0, length, 0)
+                Axis.Z -> LinearCoordDiff(0, 0, length)
+            }
+        }
+    }
 }
 
 class LongCoordDiff(dx: Int = 0, dy: Int = 0, dz: Int = 0) : LinearCoordDiff(dx, dy, dz) {
