@@ -17,6 +17,7 @@ class BoundedSlices(val target: Model, val system: System) : Solution {
         val numColumns = target.box.width / numBots
         val lastColumn = target.box.width % numBots
         goToStart()
+        flipTo(Harmonics.HIGH)
         for (i in 0 until numColumns) {
             if (i > 0)
                 shift(system.numBots)
