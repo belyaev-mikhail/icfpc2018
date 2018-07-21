@@ -7,6 +7,7 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.ByteOrder
+import java.util.*
 
 data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean> = PersistentHashMap.empty()) {
     val sizeCubed by lazy { size * size * size }
@@ -42,10 +43,18 @@ data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean
         if (!grounded) return
 
         mutableData.assoc(p.index, true)
+
         val notGroundedNeighbors = neighbors.filterNot { it.isTriviallyGrounded || mutableData[it.index] == true }
-        for (neighbor in notGroundedNeighbors) {
-            mutableData.assoc(neighbor.index, true)
-            propagateGroundness(neighbor, mutableData)
+        val visited = notGroundedNeighbors.toMutableSet()
+        val toProceed: Queue<Point> = ArrayDeque(notGroundedNeighbors)
+        while(toProceed.isNotEmpty()) {
+            val e = toProceed.remove()
+            mutableData.assoc(e.index, true)
+            val notGroundedNeighbors = e.options(listOf(-1, 1), listOf(-1, 1), listOf(-1, 1)).filter {
+                it.inBounds && mutableData[it.index] == false && it !in visited
+            }
+            visited.addAll(notGroundedNeighbors)
+            toProceed.addAll(notGroundedNeighbors)
         }
         return
     }

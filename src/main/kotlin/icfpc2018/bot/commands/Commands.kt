@@ -352,3 +352,20 @@ data class FusionT(val p: FusionP, val s: FusionS) : GroupCommand {
         return true
     }
 }
+
+val allPossibleMoves = (1..15).flatMap {
+    listOf(SMove(LongCoordDiff(dx = it)),
+            SMove(LongCoordDiff(dy = it)),
+            SMove(LongCoordDiff(dz = it)))
+} + (1..5).flatMap { s0 ->
+    (1..5).flatMap { s1 ->
+        listOf(
+                LMove(ShortCoordDiff(dx = s0), ShortCoordDiff(dy = s1)),
+                LMove(ShortCoordDiff(dx = s0), ShortCoordDiff(dz = s1)),
+                LMove(ShortCoordDiff(dy = s0), ShortCoordDiff(dx = s1)),
+                LMove(ShortCoordDiff(dy = s0), ShortCoordDiff(dz = s1)),
+                LMove(ShortCoordDiff(dz = s0), ShortCoordDiff(dx = s1)),
+                LMove(ShortCoordDiff(dz = s0), ShortCoordDiff(dy = s1))
+        )
+    }
+}

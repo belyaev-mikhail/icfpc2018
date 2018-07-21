@@ -1,7 +1,6 @@
 package icfpc2018.bot.state
 
 import icfpc2018.bot.state.LinearCoordDiff.Axis.*
-import icfpc2018.solutions.sections.indices
 import org.organicdesign.fp.collections.PersistentTreeSet
 import java.util.*
 import kotlin.math.abs
@@ -58,6 +57,7 @@ open class CoordDiff(val dx: Int, val dy: Int, val dz: Int) {
 }
 
 operator fun Point.plus(cd: CoordDiff) = Point(x + cd.dx, y + cd.dy, z + cd.dz)
+operator fun Point.minus(that: Point) = CoordDiff(this.x - that.x, this.y - that.y, this.z - that.z)
 
 fun Point.options(dx: List<Int>, dy: List<Int>, dz: List<Int>): Set<Point> =
         (dx.map { copy(x = x + it, y = y, z = z) } +
