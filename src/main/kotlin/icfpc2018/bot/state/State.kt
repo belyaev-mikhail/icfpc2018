@@ -63,10 +63,18 @@ open class CoordDiff(val dx: Int, val dy: Int, val dz: Int) {
 
 operator fun Point.plus(cd: CoordDiff) = Point(x + cd.dx, y + cd.dy, z + cd.dz)
 
-fun Point.options(dx: List<Int>, dy: List<Int>, dz: List<Int>): Set<Point> =
-        (dx.map { copy(x = x + it, y = y, z = z) } +
-                dy.map { copy(x = x, y = y + it, z = z) } +
-                dz.map { copy(x = x, y = y, z = z + it) }).toSet()
+fun Point.options(dx: List<Int>, dy: List<Int>, dz: List<Int>): Set<Point> {
+    val res = mutableSetOf<Point>()
+    for (xx in dx) {
+        for (yy in dy) {
+            for (zz in dz) {
+                res.add(Point(x + xx, y + yy, z + zz))
+            }
+        }
+    }
+    res.remove(this)
+    return res
+}
 
 fun Set<Point>.inRange(model: Model) =
         filterTo(mutableSetOf()) {
