@@ -15,15 +15,15 @@ class GroundedBoundedSlices(val target: Model, val system: System) : Solution {
         val numBots = system.numBots
         val numColumns = target.box.width / numBots
         val lastColumn = target.box.width % numBots
-//        goToStart()
+        goToStart()
         for (i in 0 until numColumns) {
             if (i > 0)
-                shift()
+                shift(system.numBots)
             column()
         }
         if (lastColumn != 0) {
             merge(lastColumn)
-            shift()
+            shift(system.numBots)
             column()
         }
         flipTo(Harmonics.LOW)
@@ -42,6 +42,24 @@ class GroundedBoundedSlices(val target: Model, val system: System) : Solution {
             commands.add(Fission(NearCoordDiff(1, 0, 0), maxBotIndex - i - 1))
             system.timeStep(commands)
         }
+    }
+
+    private fun goToStart() {
+        shift(target.box.left)
+        val z = target.box.middle
+        val y = target.box.bottom
+        val commands1 = ArrayList<Command>()
+        for (i in 0 until z / 15)
+            commands1.add(SMove(LongCoordDiff(dz = 15)))
+        if (z % 15 != 0)
+            commands1.add(SMove(LongCoordDiff(dz = z % 15)))
+        val commands2 = ArrayList<Command>()
+        for (i in 0 until y / 15)
+            commands2.add(SMove(LongCoordDiff(dy = 15)))
+        if (y % 15 != 0)
+            commands2.add(SMove(LongCoordDiff(dy = y % 15)))
+        system.timeStep(commands1)
+        system.timeStep(commands2)
     }
 
     private fun column() {
@@ -143,11 +161,8 @@ class GroundedBoundedSlices(val target: Model, val system: System) : Solution {
         }
     }
 
-    private fun shift() {
-        val firstStep = system.numBots / 15
-        val secondStep = system.numBots % 15
-        if (firstStep != 0) atomicShift(15)
-        if (secondStep != 0) atomicShift(secondStep)
+    private fun shift(value: Int) {
+        TODO()
     }
 
     private fun atomicShift(size: Int) {
