@@ -1,9 +1,9 @@
-package icfpc2018.bot.util
+package icfpc2018.bot.algo
 
 import java.util.*
 
 class AStar<T>(
-        val neighbours: (T) -> Collection<T>,
+        val neighbours: (T) -> Iterable<T>,
         val heuristic: (T) -> Long,
         val goal: (T) -> Boolean) {
 
@@ -12,10 +12,22 @@ class AStar<T>(
 
         override fun equals(other: Any?) = other is AStar<*>.History && other.value == value
         override fun hashCode(): Int = value?.hashCode() ?: 0
+
+        fun asList(): List<T> {
+            val mut: MutableList<T> = mutableListOf()
+            var current = this ?: null
+            while(current != null) {
+                mut += current.value
+                current = current.previous
+            }
+            return mut.reversed()
+        }
+
+        val score by lazy { len + heuristic(value) }
     }
 
     val closed: MutableSet<History> = mutableSetOf()
-    val open: PriorityQueue<History> = PriorityQueue(Comparator.comparing<History, Long> { it.len + heuristic(it.value) })
+    val open: PriorityQueue<History> = PriorityQueue(Comparator.comparing(AStar<T>.History::score).reversed())
     val roots: MutableMap<T, History> = mutableMapOf()
 
     fun run(start: T): History {
@@ -25,7 +37,6 @@ class AStar<T>(
 
             if(goal(current.value)) return current
 
-            open.poll()
             closed += current
 
             for(neighbour in neighbours(current.value)) {
@@ -36,7 +47,7 @@ class AStar<T>(
                 if(hist !in open) {
                     open += hist
                 }
-                else if(hist.len >= roots[neighbour]!!.len) continue
+                else if(hist.score >= roots[neighbour]!!.score) continue
 
                 roots[neighbour] = hist
             }
