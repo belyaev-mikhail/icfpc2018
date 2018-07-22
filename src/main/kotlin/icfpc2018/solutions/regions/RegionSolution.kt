@@ -1,5 +1,6 @@
 package icfpc2018.solutions.regions
 
+import icfpc2018.Config
 import icfpc2018.bot.commands.*
 import icfpc2018.bot.state.*
 import icfpc2018.solutions.BotManager
@@ -12,8 +13,20 @@ class RegionSolution(val target: Model, val system: System) : Solution {
 
     private val regions = split(target)
 
+    private fun linearFission() {
+        val maxBotIndex = Integer.min(target.box.width, Config.maxBots) - 1
+        for (i in 0 until maxBotIndex) {
+            val commands = ArrayList<Command>()
+            for (j in 0 until i) {
+                commands.add(Wait)
+            }
+            commands.add(Fission(NearCoordDiff(1, 0, 0), maxBotIndex - i - 1))
+            system.timeStep(commands)
+        }
+    }
+
     override fun solve() {
-        linearFission(target.box.width)
+        linearFission()
         flipTo(Harmonics.HIGH)
         for (i in 1..target.box.top) {
             layer(regions[i])

@@ -24,7 +24,8 @@ data class State(
         val volatileModel: VolatileModel,
         val bots: PersistentTreeSet<Bot>
 ) {
-    fun canMoveTo(p: Point) = !matrix[p] && !volatileModel[p] && bots.none { it.position == p }
+    fun canMoveTo(p: Point) =
+            p.inRange(matrix) && !matrix[p] && !volatileModel[p] && bots.none { it.position == p }
 }
 
 data class Point(val x: Int, val y: Int, val z: Int) {
@@ -71,6 +72,8 @@ open class CoordDiff(val dx: Int, val dy: Int, val dz: Int) {
     }
 
     fun toLinear(): LinearCoordDiff = LinearCoordDiff(dx, dy, dz)
+    fun toLong(): LongCoordDiff = LongCoordDiff(dx, dy, dz)
+    fun toShort(): ShortCoordDiff = ShortCoordDiff(dx, dy, dz)
 }
 
 operator fun Point.plus(cd: CoordDiff) = Point(x + cd.dx, y + cd.dy, z + cd.dz)
@@ -183,6 +186,8 @@ class ShortCoordDiff(dx: Int = 0, dy: Int = 0, dz: Int = 0) : LinearCoordDiff(dx
         }
     }
 }
+
+fun ShortCoordDiff.toLong() = LongCoordDiff(dx, dy, dz)
 
 operator fun ShortCoordDiff.unaryMinus() = ShortCoordDiff(-dx, -dy, -dz)
 

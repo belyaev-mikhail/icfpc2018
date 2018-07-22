@@ -8,6 +8,7 @@ import icfpc2018.bot.state.Harmonics.LOW
 import icfpc2018.bot.util.minus
 import icfpc2018.bot.util.plus
 import org.apache.commons.compress.utils.BitInputStream
+import org.organicdesign.fp.collections.PersistentHashSet
 import org.organicdesign.fp.collections.PersistentTreeSet
 import java.io.InputStream
 import java.io.OutputStream
@@ -600,7 +601,8 @@ data class GFillT(val components: List<GFill>) : GroupCommand {
         }
     }
 
-    override fun inverse(bots: Array<Bot>): Command = GVoidT(components.map { it.inverse(arrayOf()) })
+    override fun inverse(bots: Array<Bot>) =
+            GVoidT(components.map { it.inverse(Array(0){ Bot(0, Point.ZERO, PersistentTreeSet.empty<Int>()) }) })
 }
 
 data class GVoid(val nd: NearCoordDiff, val fd: FarCoordDiff) : SimpleCommand {

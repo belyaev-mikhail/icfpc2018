@@ -34,18 +34,25 @@ class BotManager(val system: System) {
         val commands = TreeMap<Bot, Command>()
         val done = ArrayList<Task>()
         for (task in taskPool) {
+            if (!task.hasNext()) {
+                done.add(task)
+                continue
+            }
             val taskCommands = task.next()
+            for (bot in botPool) {
+                if (bot in taskCommands)
+                    throw CollisionError()
+            }
             if (taskCommands.keys.any { it in commands })
                 throw CollisionError()
             commands.putAll(taskCommands)
-            if (task.hasNext()) continue
-            done.add(task)
         }
         for (task in done) {
             taskPool.remove(task)
         }
         for (bot in botPool) {
-            if (bot in commands) throw CollisionError()
+            if (bot in commands)
+                throw CollisionError()
             commands[bot] = Wait
         }
         if (commands.values.all { it === Wait }) throw DeadLockError()

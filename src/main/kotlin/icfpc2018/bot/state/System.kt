@@ -38,11 +38,15 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
         currentState = stateTrace.last()
     }
 
-    fun reserve(region: Iterable<Point>) {
+    fun reserve(region: Iterable<Point>): Boolean {
+        if(region.any { currentState.volatileModel[it] }) return false
+
         val volatileModel = currentState.volatileModel.set(region)
         val state = currentState.copy(volatileModel = volatileModel)
         stateTrace.add(state)
         currentState = state
+        return true
+
     }
 
     fun release(region: Iterable<Point>) {

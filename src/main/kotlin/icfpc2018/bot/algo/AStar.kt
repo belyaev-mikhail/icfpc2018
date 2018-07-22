@@ -27,7 +27,7 @@ class AStar<T>(
     }
 
     val closed: MutableSet<History> = mutableSetOf()
-    val open: PriorityQueue<History> = PriorityQueue(Comparator.comparing(AStar<T>.History::score).reversed())
+    val open: PriorityQueue<History> = PriorityQueue(Comparator.comparing(AStar<T>.History::score))
     val roots: MutableMap<T, History> = mutableMapOf()
 
     fun run(start: T): History? {
