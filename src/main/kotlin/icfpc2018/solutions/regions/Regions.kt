@@ -1,8 +1,9 @@
-package icfpc2018.solutions
+package icfpc2018.solutions.regions
 
 import icfpc2018.bot.state.Model
 import icfpc2018.bot.state.Point
 import icfpc2018.bot.state.System
+import icfpc2018.solutions.Solution
 
 sealed class Region
 
@@ -14,7 +15,7 @@ data class Voxel(val point: Point) : Region()
 
 class Regions(val target: Model, val system: System) : Solution {
 
-    val rectangles = Regions.split(target)
+    val rectangles = split(target)
 
     override fun solve() {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.

@@ -6,6 +6,7 @@ import icfpc2018.solutions.boundedSlices.BoundedSlices
 import icfpc2018.solutions.groundedBoundedSlices.GroundedBoundedSlices
 import icfpc2018.solutions.groundedSlices.GroundedSlices
 import icfpc2018.solutions.portfolio.Portfolio
+import icfpc2018.solutions.regions.Regions
 import icfpc2018.solutions.sections.Sections
 import icfpc2018.solutions.slices.Slices
 import icfpc2018.solutions.tripleSlices.TripleSlices
