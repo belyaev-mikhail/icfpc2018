@@ -1,29 +1,46 @@
 package icfpc2018.solutions.regions
 
-import icfpc2018.bot.state.Model
+import icfpc2018.bot.state.CoordDiff
 import icfpc2018.bot.state.Point
-import icfpc2018.bot.state.System
-import icfpc2018.solutions.Solution
+import icfpc2018.bot.state.minus
+import icfpc2018.bot.state.plus
+import icfpc2018.bot.state.coords
 
-sealed class Region
+sealed class Region {
+    abstract val points: Set<Point>
+}
 
-data class Rectangle(val left: Int, val right: Int, val bottom: Int, val top: Int) : Region()
+class StructureError : Exception()
 
-data class Section(val first: Point, val second: Point) : Region()
+data class Rectangle(val p1: Point, val p2: Point, val p3: Point, val p4: Point) : Region() {
+    override val points: Set<Point>
+        get() = Pair(p1, p3).coords().toSet()
 
-data class Voxel(val point: Point) : Region()
+    init {
+        Section(p1, p2)
+        Section(p2, p3)
+        Section(p3, p4)
+        Section(p4, p1)
+    }
+}
 
-class Regions(val target: Model, val system: System) : Solution {
+data class Section(val first: Point, val second: Point) : Region() {
+    override val points: Set<Point>
+        get() = Pair(first, second).coords().toSet()
 
-    val rectangles = split(target)
-
-    override fun solve() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    init {
+        checkStructure() || throw StructureError()
     }
 
-    companion object {
-        fun split(model: Model): List<List<Region>> {
-            return emptyList()
-        }
+    private fun checkStructure() = when {
+        first.x == second.x && first.y == second.y -> true
+        first.x == second.x && first.z == second.z -> true
+        first.z == second.z && first.y == second.y -> true
+        else -> false
     }
+}
+
+data class Voxel(val point: Point) : Region() {
+    override val points: Set<Point>
+        get() = setOf(point)
 }

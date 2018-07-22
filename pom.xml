@@ -102,6 +102,23 @@
             <artifactId>klaxon</artifactId>
             <version>3.0.6</version>
         </dependency>
+        <dependency>
+            <groupId>com.coveo</groupId>
+            <artifactId>nashorn-commonjs-modules</artifactId>
+            <version>1.0.9</version>
+        </dependency>
+        <dependency>
+            <groupId>math.geom2d</groupId>
+            <artifactId>javaGeom</artifactId>
+            <version>0.11.1</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.eclipse.elk/org.eclipse.elk.alg.layered -->
+        <dependency>
+            <groupId>org.eclipse.elk</groupId>
+            <artifactId>org.eclipse.elk.alg.layered</artifactId>
+            <version>0.4.0</version>
+        </dependency>
+
 
     </dependencies>
 
@@ -193,6 +210,14 @@
                 </executions>
                 <configuration>
                     <jvmTarget>1.8</jvmTarget>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>8</source>
+                    <target>8</target>
                 </configuration>
             </plugin>
         </plugins>
