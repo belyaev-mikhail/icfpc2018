@@ -128,5 +128,6 @@ object GoTo {
             yield(mapOf(bot to command))
         }
         system.release(trace)
+        system.release(setOf(bot.position))
     }.iterator()
 }
