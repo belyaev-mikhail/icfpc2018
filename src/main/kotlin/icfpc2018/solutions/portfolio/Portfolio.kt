@@ -23,7 +23,12 @@ class Portfolio(val target: Model, val system: System) : Solution {
         for (solutionName in solutionNames) {
             val solutionSystem = System(initialState)
             val solution = getSolutionByName(solutionName, target, solutionSystem)
-            solution.solve()
+            try {
+                solution.solve()
+            } catch (e: Exception) {
+                log.error("Solution $solutionName throwed exception $e")
+                continue
+            }
 
             if (solutionSystem.currentState.matrix == target) {
                 if (!initialized || system.score > solutionSystem.score) {
