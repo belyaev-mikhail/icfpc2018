@@ -54,7 +54,7 @@ fun submitChecked(resultDirs: List<String>) {
             }
             val model = Model(targetModel.size)
             val bot = Bot(1, Point(0, 0, 0), PersistentTreeSet.of(2..Config.maxBots))
-            val state = State(0, Harmonics.LOW, model, persistentTreeSetOf(bot))
+            val state = State(0, Harmonics.LOW, model, VolatileModel(), persistentTreeSetOf(bot))
 
             var haveSolution = false
             for ((solutionName, solution) in result.getSortedSolutions()) {
