@@ -1,6 +1,6 @@
 package icfpc2018
 
-import icfpc2018.bot.commands.Command
+import icfpc2018.bot.commands.*
 import icfpc2018.bot.state.*
 import icfpc2018.bot.util.persistentTreeSetOf
 import icfpc2018.solutions.getSolutionByName
@@ -110,6 +110,7 @@ fun assemble(solutionName: String, targetModels: List<String>, resultsDir: Strin
             val ofile = FileOutputStream(File(resultTraceFile))
             system.commandTrace.forEach { it.write(ofile) }
             log.info("Results dumped")
+            ofile.close()
         }
     }
 
@@ -164,6 +165,95 @@ fun disassemble(solutionName: String, targetModels: List<String>, resultsDir: St
             val ofile = FileOutputStream(File(resultTraceFile))
             resultingTrace.forEach { it.write(ofile) }
             log.info("Results dumped")
+            ofile.close()
+        }
+    }
+
+    results.writeToDirectory(resultsDir)
+}
+
+fun resassemble(solutionName: String, targetModels: List<String>, resultsDir: String) {
+    val results = Results.readFromDirectory(resultsDir)
+    for (targetModelName in targetModels) {
+        log.info("Running with model $targetModelName")
+
+        val sourceModelFile = File("models/${targetModelName}_src.mdl").inputStream()
+        val sourceModel = Model.readMDL(sourceModelFile)
+
+        log.info("Disassembling...")
+
+        val smodel = Model(sourceModel.size)
+        val sbot = Bot(1, Point(0, 0, 0), PersistentTreeSet.of(2..Config.maxBots))
+        val sstate = State(0, Harmonics.LOW, smodel, persistentTreeSetOf(sbot))
+
+        val sassembleSystem = System(sstate)
+        val ssolution = when (solutionName) {
+            "trace" -> throw IllegalArgumentException("Reassemble does no support traces")
+            else -> getSolutionByName(solutionName, sourceModel, sassembleSystem)
+        }
+        log.info(ssolution::class.java.name)
+
+        try {
+            ssolution.solve()
+        } catch (e: Exception) {
+            log.error("Solution $ssolution throwed exception $e")
+            continue
+        }
+
+        val disassembleTrace = Trace(sassembleSystem.commandTrace, System(sstate)).inverted()
+
+        log.info { "Energy: " + sassembleSystem.currentState.energy }
+
+        val ssuccess = sassembleSystem.currentState.matrix == sourceModel
+
+        log.info(if (ssuccess) "Success" else "Fail")
+
+        log.info("Reassembling...")
+
+        val targetModelFile = File("models/${targetModelName}_tgt.mdl").inputStream()
+        val targetModel = Model.readMDL(targetModelFile)
+
+        val tmodel = Model(targetModel.size)
+        val tbot = Bot(1, Point(0, 0, 0), PersistentTreeSet.of(2..Config.maxBots))
+        val tstate = State(0, Harmonics.LOW, tmodel, persistentTreeSetOf(tbot))
+
+        val tassembleSystem = System(tstate)
+        val tsolution = when (solutionName) {
+            "trace" -> throw IllegalArgumentException("Reassemble does no support traces")
+            else -> getSolutionByName(solutionName, targetModel, tassembleSystem)
+        }
+        log.info(tsolution::class.java.name)
+
+        try {
+            tsolution.solve()
+        } catch (e: Exception) {
+            log.error("Solution $tsolution throwed exception $e")
+            continue
+        }
+
+        val reassembleTrace = tassembleSystem.commandTrace
+
+        log.info { "Energy: " + tassembleSystem.currentState.energy }
+
+        val success = tassembleSystem.currentState.matrix == targetModel
+
+        log.info(if (success) "Success" else "Fail")
+
+        if (success) {
+            val resultTraceFile = "$resultsDir/${targetModelName}_$solutionName.nbt"
+            results.addNewResult(targetModelName, solutionName, sassembleSystem.currentState.energy + tassembleSystem.currentState.energy, resultTraceFile)
+
+            val ofile = FileOutputStream(File(resultTraceFile))
+            disassembleTrace.dropLast(1).forEach { it.write(ofile) }
+            if(sassembleSystem.stateTrace.takeLast(2).first().bots.first().id != 1) {
+                Fission(NearCoordDiff(1, 0, 0), 2).write(ofile)
+                FusionP(NearCoordDiff(-1, 0, 0)).write(ofile)
+                FusionS(NearCoordDiff(1, 0, 0)).write(ofile)
+                SMove(LongCoordDiff(-1, 0, 0)).write(ofile)
+            }
+            reassembleTrace.forEach { it.write(ofile) }
+            ofile.close()
+            log.info("Results dumped")
         }
     }
 
@@ -176,6 +266,7 @@ fun main(args: Array<String>) {
     when (arguments.getMode()) {
         RunMode.ASSEMBLE -> assemble(arguments.getSolution(), arguments.getModels(), arguments.getResults())
         RunMode.DISASSEMBLE -> disassemble(arguments.getSolution(), arguments.getModels(), arguments.getResults())
+        RunMode.REASSEMBLE -> resassemble(arguments.getSolution(), arguments.getModels(), arguments.getResults())
         RunMode.SUBMIT -> submit(arguments.getSubmitDirectories())
         else -> throw IllegalArgumentException()
     }
