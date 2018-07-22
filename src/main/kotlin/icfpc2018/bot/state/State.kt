@@ -3,6 +3,7 @@ package icfpc2018.bot.state
 import icfpc2018.bot.state.LinearCoordDiff.Axis.*
 import org.organicdesign.fp.collections.ImSortedSet
 import org.organicdesign.fp.collections.PersistentTreeSet
+import java.io.InputStream
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -155,11 +156,15 @@ class LongCoordDiff(dx: Int = 0, dy: Int = 0, dz: Int = 0) : LinearCoordDiff(dx,
     }
 }
 
+operator fun LongCoordDiff.unaryMinus() = LongCoordDiff(-dx, -dy, -dz)
+
 class ShortCoordDiff(dx: Int = 0, dy: Int = 0, dz: Int = 0) : LinearCoordDiff(dx, dy, dz) {
     init {
         assert(mlen <= 5)
     }
 }
+
+operator fun ShortCoordDiff.unaryMinus() = ShortCoordDiff(-dx, -dy, -dz)
 
 class NearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
     init {
@@ -171,6 +176,8 @@ class NearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
                 NearCoordDiff(target.x - origin.x, target.y - origin.y, target.z - origin.z)
     }
 }
+
+operator fun NearCoordDiff.unaryMinus() = NearCoordDiff(-dx, -dy, -dz)
 
 class FarCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
     init {
