@@ -227,6 +227,8 @@ interface Command {
 
         }
     }
+
+    fun inverse(bots: Array<Bot>): Command = this
 }
 
 interface SimpleCommand : Command {
@@ -326,6 +328,8 @@ data class SMove(val lld: LongCoordDiff) : SimpleCommand {
             )
         }
     }
+
+    override fun inverse(bots: Array<Bot>): Command = SMove(-lld)
 }
 
 data class LMove(val sld1: ShortCoordDiff, val sld2: ShortCoordDiff) : SimpleCommand {
@@ -354,6 +358,8 @@ data class LMove(val sld1: ShortCoordDiff, val sld2: ShortCoordDiff) : SimpleCom
             )
         }
     }
+
+    override fun inverse(bots: Array<Bot>): Command = LMove(-sld2, -sld1)
 }
 
 data class Fission(val nd: NearCoordDiff, val m: Int) : SimpleCommand {
@@ -401,6 +407,8 @@ data class Fission(val nd: NearCoordDiff, val m: Int) : SimpleCommand {
                 this, "Need ${m + 1} seeds for fission, have ${bot.seeds.size}"
         )
     }
+
+    override fun inverse(bots: Array<Bot>) = FusionT(FusionP(nd), FusionS(-nd))
 }
 
 data class Fill(val nd: NearCoordDiff) : SimpleCommand {
@@ -426,6 +434,8 @@ data class Fill(val nd: NearCoordDiff) : SimpleCommand {
                 this, newPos, state
         )
     }
+
+    override fun inverse(bots: Array<Bot>): Command = Void(nd)
 }
 
 data class Void(val nd: NearCoordDiff) : SimpleCommand {
@@ -451,14 +461,18 @@ data class Void(val nd: NearCoordDiff) : SimpleCommand {
                 this, newPos, state
         )
     }
+
+    override fun inverse(bots: Array<Bot>) = Fill(nd)
 }
 
 data class FusionP(val nd: NearCoordDiff) : SimpleCommand {
     override fun apply(bot: Bot, state: State): State = TODO()
+    override fun inverse(bots: Array<Bot>) = TODO()
 }
 
 data class FusionS(val nd: NearCoordDiff) : SimpleCommand {
     override fun apply(bot: Bot, state: State): State = TODO()
+    override fun inverse(bots: Array<Bot>) = TODO()
 }
 
 data class FusionT(val p: FusionP, val s: FusionS) : GroupCommand {
@@ -489,10 +503,19 @@ data class FusionT(val p: FusionP, val s: FusionS) : GroupCommand {
                 this, "$botS + $s != $botP"
         )
     }
+
+    override fun inverse(bots: Array<Bot>): Command {
+        require(bots.size == 2)
+        val (botP, botS) = bots
+        require(Math.abs(botP.id - botS.id) == 1)
+        val m = botS.seeds.size
+        return Fission(p.nd, m)
+    }
 }
 
 data class GFill(val nd: NearCoordDiff, val fd: FarCoordDiff) : SimpleCommand {
     override fun apply(bot: Bot, state: State): State = TODO()
+    override fun inverse(bots: Array<Bot>) = GVoid(nd, fd)
 }
 
 data class GFillT(val components: List<GFill>) : GroupCommand {
@@ -576,10 +599,14 @@ data class GFillT(val components: List<GFill>) : GroupCommand {
             }
         }
     }
+
+    override fun inverse(bots: Array<Bot>): Command = GVoidT(components.map { it.inverse(arrayOf()) })
 }
 
 data class GVoid(val nd: NearCoordDiff, val fd: FarCoordDiff) : SimpleCommand {
     override fun apply(bot: Bot, state: State): State = TODO()
+
+    override fun inverse(bots: Array<Bot>) = GFill(nd, fd)
 }
 
 data class GVoidT(val components: List<GVoid>) : GroupCommand {
@@ -663,6 +690,8 @@ data class GVoidT(val components: List<GVoid>) : GroupCommand {
             }
         }
     }
+
+    override fun inverse(bots: Array<Bot>): Command = GFillT(components.map { it.inverse(arrayOf()) })
 }
 
 
