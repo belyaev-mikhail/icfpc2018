@@ -39,14 +39,17 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
     }
 
     fun reserve(region: Iterable<Point>): Boolean {
-        if(region.any { currentState.volatileModel[it] }) return false
+        if (region.any { !currentState.canMoveTo(it) }) return false
+        return lightReserve(region)
+    }
 
+    fun lightReserve(region: Iterable<Point>): Boolean {
+        if (region.any { currentState.volatileModel[it] }) return false
         val volatileModel = currentState.volatileModel.set(region)
         val state = currentState.copy(volatileModel = volatileModel)
         stateTrace.add(state)
         currentState = state
         return true
-
     }
 
     fun release(region: Iterable<Point>) {

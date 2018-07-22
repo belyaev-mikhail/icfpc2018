@@ -116,12 +116,12 @@ fun assemble(solutionName: String, targetModels: List<String>, resultsDir: Strin
         }
         log.info(solution::class.java.name)
 
-        try {
+//        try {
             solution.solve()
-        } catch (e: Exception) {
-            log.error("Solution $solution throwed exception $e")
-            continue
-        }
+//        } catch (e: Exception) {
+//            log.error("Solution $solution throwed exception $e")
+//            continue
+//        }
 
         log.info { "Energy: " + system.currentState.energy }
 

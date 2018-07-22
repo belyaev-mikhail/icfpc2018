@@ -5,7 +5,6 @@ import icfpc2018.bot.commands.*
 import icfpc2018.bot.state.*
 import icfpc2018.solutions.BotManager
 import icfpc2018.solutions.Solution
-import icfpc2018.solutions.linearFission
 import icfpc2018.solutions.sections.indices
 
 
@@ -29,6 +28,7 @@ class RegionSolution(val target: Model, val system: System) : Solution {
         linearFission()
         flipTo(Harmonics.HIGH)
         for (i in 0 until target.box.top) {
+            println(i)
             layer(regions[i])
             if (i != target.box.top - 2)
                 goToBase()
@@ -37,6 +37,12 @@ class RegionSolution(val target: Model, val system: System) : Solution {
         goToBase()
         merge(1)
         halt()
+    }
+
+    private fun goToBase() {
+        val manager = BotManager(system)
+        manager.add(GoToBase(manager))
+        manager.apply()
     }
 
     private fun flip() {
@@ -74,12 +80,6 @@ class RegionSolution(val target: Model, val system: System) : Solution {
             }
             manager.add(task)
         }
-        manager.apply()
-    }
-
-    private fun goToBase() {
-        val manager = BotManager(system)
-        manager.add(GoToBase(system, manager))
         manager.apply()
     }
 

@@ -17,6 +17,8 @@ class BotManager(val system: System) {
 
     private val taskPool = ArrayList<Task>()
 
+    private var fullWaitCounter = 0
+
     fun add(task: Task) = taskPool.add(task)
 
     fun reserve(numBots: Int): List<Bot>? {
@@ -55,7 +57,11 @@ class BotManager(val system: System) {
                 throw CollisionError()
             commands[bot] = Wait
         }
-        if (!taskPool.isEmpty() && commands.values.all { it === Wait })
+        if (commands.values.all { it === Wait })
+            ++fullWaitCounter
+        else
+            fullWaitCounter = 0
+        if (fullWaitCounter == 3)
             throw DeadLockError()
         system.timeStep(commands.values.toList())
     }
