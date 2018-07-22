@@ -3,10 +3,7 @@
 package icfpc2018.solutions.regions
 
 import icfpc2018.bot.algo.AStar
-import icfpc2018.bot.commands.Command
-import icfpc2018.bot.commands.Fill
-import icfpc2018.bot.commands.GFill
-import icfpc2018.bot.commands.Wait
+import icfpc2018.bot.commands.*
 import icfpc2018.bot.state.*
 import icfpc2018.solutions.BotManager
 import icfpc2018.solutions.Task
@@ -116,10 +113,63 @@ object VoxelTask {
     }.iterator()
 }
 
-object GoTo {
-    fun buildTrace(from: Point, to: Point, system: System): Set<Point>? = TODO()
+fun <T> List<T>.sepWhile(limit: Int = size, predicate: (T) -> Boolean): Pair<List<T>, List<T>> {
+    val before = mutableListOf<T>()
+    var j = 0
+    for(i in 0..minOf(lastIndex, limit)) {
+        j = i
+        val it = get(i)
+        if(predicate(it)) before += it
+        else return before to this.subList(i, size)
+    }
+    if(before.size == size) return before to listOf()
+    return before to subList(before.size, size)
+}
 
-    fun convertTrace(trace: Set<Point>): List<Command> = TODO()
+object GoTo {
+    fun buildTrace(from: Point, to: Point, system: System): List<Point>? {
+        val algo = AStar<Point>(
+                neighbours = { it.immediateNeighbours().filter { system.currentState.canMoveTo(it) } },
+                heuristic = { (it - to).mlen.toLong() },
+                goal = { it == to }
+        )
+        return algo.run(from)?.asList()
+    }
+
+    fun convertTrace(trace: List<Point>): List<Command> {
+        val res = mutableListOf<CoordDiff>()
+        val diffs = trace.windowed(2) { (a, b) -> (b - a).toLinear() }
+
+        var current = diffs
+
+        var forceShort = false
+
+        while(current.isNotEmpty()) {
+            val pt = current.first()
+            val (move, rest) = current.sepWhile(limit = 30) { it.axis == pt.axis }
+            current = rest
+            if (move.isEmpty()) continue
+            if (move.size > 5 && !forceShort) {
+                res += (LongCoordDiff.fromAxis(pt.axis, move.size))
+            }
+            else {
+                res += (ShortCoordDiff.fromAxis(pt.axis, move.size))
+                forceShort = !forceShort
+            }
+        }
+
+        val it = res.iterator()
+        val commands = mutableListOf<Command>()
+        while(it.hasNext()) {
+            val e = it.next()
+            if(e is LongCoordDiff) commands += SMove(e)
+            if(e is ShortCoordDiff) {
+                val e2 = it.next() as? ShortCoordDiff ?: throw IllegalArgumentException()
+                commands += LMove(e, e2)
+            }
+        }
+        return commands
+    }
 
     operator fun invoke(bot: Bot, point: Point, system: System): Task = buildSequence {
         val wait = mapOf(bot to Wait)
