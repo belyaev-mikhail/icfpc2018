@@ -69,6 +69,8 @@ open class CoordDiff(val dx: Int, val dy: Int, val dz: Int) {
     override fun toString(): String {
         return "CoordDiff(dx=$dx, dy=$dy, dz=$dz)"
     }
+
+    fun toLinear(): LinearCoordDiff = LinearCoordDiff(dx, dy, dz)
 }
 
 operator fun Point.plus(cd: CoordDiff) = Point(x + cd.dx, y + cd.dy, z + cd.dz)
@@ -169,6 +171,16 @@ operator fun LongCoordDiff.unaryMinus() = LongCoordDiff(-dx, -dy, -dz)
 class ShortCoordDiff(dx: Int = 0, dy: Int = 0, dz: Int = 0) : LinearCoordDiff(dx, dy, dz) {
     init {
         assert(mlen <= 5)
+    }
+
+    companion object {
+        fun fromAxis(axis: Axis, length: Int): ShortCoordDiff {
+            return when (axis) {
+                Axis.X -> ShortCoordDiff(length, 0, 0)
+                Axis.Y -> ShortCoordDiff(0, length, 0)
+                Axis.Z -> ShortCoordDiff(0, 0, length)
+            }
+        }
     }
 }
 
