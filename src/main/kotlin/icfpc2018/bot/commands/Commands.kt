@@ -399,7 +399,7 @@ data class Fission(val nd: NearCoordDiff, val m: Int) : SimpleCommand {
         )
     }
 
-    override fun inverse(bots: Array<Bot>): Command = FusionT(FusionP(nd), FusionS(-nd))
+    override fun inverse(bots: Array<Bot>) = FusionT(FusionP(nd), FusionS(-nd))
 }
 
 data class Fill(val nd: NearCoordDiff) : SimpleCommand {
@@ -497,10 +497,9 @@ data class FusionT(val p: FusionP, val s: FusionS) : GroupCommand {
 
     override fun inverse(bots: Array<Bot>): Command {
         require(bots.size == 2)
-        val botP = bots.minBy { it.id }!!
-        val botS = bots.maxBy { it.id }!!
+        val (botP, botS) = bots
         require(Math.abs(botP.id - botS.id) == 1)
-        val m = botP.seeds.firstOrNull() ?: 0
+        val m = botS.seeds.size
         return Fission(p.nd, m)
     }
 }

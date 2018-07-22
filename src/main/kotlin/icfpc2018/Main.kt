@@ -69,6 +69,15 @@ fun main(args: Array<String>) {
 
                 val ofile = FileOutputStream(File(resultTraceFile).apply { this.parentFile.mkdirs() })
                 system.commandTrace.forEach { it.write(ofile) }
+
+                run {
+                    val resultTraceFile = "results/${targetModelName}_${solutionName}_inverse.nbt"
+                    val reversedTrace = Trace(system.commandTrace, System(state)).inverted()
+
+                    val ofile = FileOutputStream(File(resultTraceFile).apply { this.parentFile.mkdirs() })
+                    reversedTrace.forEach { it.write(ofile) }
+                }
+
             }
         }
     }
