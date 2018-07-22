@@ -4,7 +4,6 @@ import icfpc2018.bot.state.Model
 import icfpc2018.bot.state.Point
 import org.eclipse.elk.alg.common.Point as RealPoint
 import icfpc2018.bot.state.System
-import icfpc2018.solutions.Solution
 import javax.script.ScriptEngineManager
 import javax.script.Invocable
 import java.io.FileReader
@@ -12,17 +11,13 @@ import jdk.nashorn.api.scripting.NashornScriptEngine
 import java.io.File
 import org.eclipse.elk.alg.common.RectilinearConvexHull
 import org.eclipse.elk.core.math.ElkRectangle
-import org.eclipse.emf.common.util.EList
 import kotlin.collections.ArrayList
+import java.util.LinkedList
 
 
-class RegionSplitter(val target: Model, val system: System) : Solution {
+class RegionSplitter(val target: Model, val system: System) {
 
     val rectangles = split(target)
-
-    override fun solve() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
 
     companion object {
         fun split(model: Model): List<List<Region>> {
@@ -109,26 +104,34 @@ class RegionSplitter(val target: Model, val system: System) : Solution {
             val pointGroups = ArrayList<List<RealPoint>>()
             var ungroupedPoints: Set<Pair<Int, Int>> = points
             while (ungroupedPoints.isNotEmpty()) {
-                val pointGroup = HashSet<Pair<Int, Int>>()
-                val first = ungroupedPoints.first()
-                floodFill(pointGroup, ungroupedPoints, first.first, first.second)
+                val pointGroup = floodFill(ungroupedPoints)
                 ungroupedPoints -= pointGroup
                 pointGroups.add(pointGroup.map { RealPoint(it.first.toDouble(), it.second.toDouble()) })
             }
             return pointGroups
         }
 
-        fun floodFill(visitedPoints: MutableSet<Pair<Int, Int>>, allPoints: Set<Pair<Int, Int>>, row: Int, col: Int) {
-            val point = row to col
-            if (visitedPoints.contains(point)) return
-            if (!allPoints.contains(point)) return
-            visitedPoints.add(point)
-            floodFill(visitedPoints, allPoints, row + 1, col)
-            floodFill(visitedPoints, allPoints, row - 1, col)
-            floodFill(visitedPoints, allPoints, row, col + 1)
-            floodFill(visitedPoints, allPoints, row, col - 1)
-        }
+        fun floodFill(allPoints: Set<Pair<Int, Int>>): Set<Pair<Int, Int>> {
+            val visitedPoints = HashSet<Pair<Int, Int>>()
+            val queue = LinkedList<Pair<Int, Int>>()
+            queue.add(allPoints.first())
 
+            while (queue.isNotEmpty()) {
+                val point = queue.poll()
+                if (visitedPoints.contains(point)) continue
+                if (!allPoints.contains(point)) continue
+
+                visitedPoints.add(point)
+
+                queue.add(point.first + 1 to point.second)
+                queue.add(point.first - 1 to point.second)
+                queue.add(point.first to point.second + 1)
+                queue.add(point.first to point.second - 1)
+            }
+
+            return visitedPoints
+
+        }
 
         val rectangleSplitter by lazy {
             val engine = ScriptEngineManager().getEngineByName("nashorn") as NashornScriptEngine
@@ -158,11 +161,4 @@ class RegionSplitter(val target: Model, val system: System) : Solution {
         }
 
     }
-}
-
-fun main(args: Array<String>) {
-    val filename = "models/FA004_tgt.mdl"
-    val targetModelFile = File(filename).inputStream()
-    val targetModel = Model.readMDL(targetModelFile)
-    RegionSplitter.split(targetModel)
 }
