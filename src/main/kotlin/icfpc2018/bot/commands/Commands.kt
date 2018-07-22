@@ -21,8 +21,17 @@ inline fun sbb(number: Int, from: Int, to: Int) = (((1 shl (to - from + 1)) - 1)
 inline fun Int.subBits(range: IntRange) = sbb(this, 7 - range.endInclusive, 7 - range.start)
 inline fun Long.subBits(range: IntRange) = toInt().subBits(range)
 
-inline fun Int.endsWithBits(bits: Int) = this and bits == bits
-inline fun Long.endsWithBits(bits: Int) = this.toInt() and bits == bits
+inline fun Int.endsWithBits(bits: Int): Boolean {
+    val maskSize = java.lang.Long.highestOneBit(bits.toLong())
+    val mask = (1 shl (maskSize + 1).toInt()) - 1
+    return (this and mask) == bits
+}
+
+inline fun Long.endsWithBits(bits: Int): Boolean {
+    val maskSize = 64L - java.lang.Long.numberOfLeadingZeros(bits.toLong())
+    val mask = (1 shl maskSize.toInt()) - 1
+    return (this.toInt() and mask) == bits
+}
 
 interface Command {
     fun write(stream: OutputStream) {

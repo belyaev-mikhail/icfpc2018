@@ -6,6 +6,10 @@ import java.io.StringWriter
 import kotlin.math.max
 import kotlin.math.min
 
+enum class RunMode {
+    ASSEMBLE, DISASSEMBLE, REASSEMBLE, SUBMIT
+}
+
 class Arguments(args: Array<String>) {
     private val options = Options()
     private val cmd: CommandLine
@@ -24,8 +28,12 @@ class Arguments(args: Array<String>) {
     }
 
     private fun setupOptions() {
+        val mode = Option(null, "mode", true, "specify run mode (a, d, r, s)")
+        mode.isRequired = true
+        options.addOption(mode)
+
         val solutionOpt = Option("s", "solution", true, "solution to use")
-        solutionOpt.isRequired = true
+        solutionOpt.isRequired = false
         options.addOption(solutionOpt)
 
         val taskOpt = Option("m", "model", true, "file with target model")
@@ -44,13 +52,35 @@ class Arguments(args: Array<String>) {
         reversed.isRequired = false
         options.addOption(reversed)
 
-        val submit = Option(null, "submit", false, "dump traces in format for submission")
-        submit.isRequired = false
+        val results = Option(null, "results", true, "directory for results dumping")
+        results.isRequired = false
+        options.addOption(results)
+
+        val submit = Option.builder()
+                .longOpt("submitDirs")
+                .argName("resultsDir1,resultsDir2,...,resultsDirN")
+                .hasArgs()
+                .valueSeparator(',')
+                .desc("merge all results from specified directories and create sibmit.zip with best of them")
+                .required(false)
+                .build()
         options.addOption(submit)
     }
 
+    fun getMode() = when (getValue("mode")) {
+        null -> throw IllegalArgumentException()
+        "a" -> RunMode.ASSEMBLE
+        "d" -> RunMode.DISASSEMBLE
+        "r" -> RunMode.REASSEMBLE
+        "s" -> RunMode.SUBMIT
+        else -> throw IllegalArgumentException()
+    }
 
-    fun isSubmit() = cmd.hasOption("submit")
+    fun getSolution() = getValue("solution") ?: throw IllegalStateException()
+    fun getResults() = getValue("results") ?: "results"
+
+    fun getSubmitDirectories() = cmd.getOptionValues("submitDirs").toList()
+
     fun isReversed() = cmd.hasOption("reversed")
 
     fun getModelNums(): List<Int> {
