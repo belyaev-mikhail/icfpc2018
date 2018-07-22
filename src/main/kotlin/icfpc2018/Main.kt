@@ -29,7 +29,7 @@ fun submit(resultDirs: List<String>) {
 
         val model = Model(targetModel.size)
         val bot = Bot(1, Point(0, 0, 0), PersistentTreeSet.of(2..Config.maxBots))
-        val state = State(0, Harmonics.LOW, model, persistentTreeSetOf(bot))
+        val state = State(0, Harmonics.LOW, model, VolatileModel(), persistentTreeSetOf(bot))
 
         var haveSolution = false
         for ((solutionName, solution) in result.getSortedSolutions()) {
@@ -73,7 +73,7 @@ fun assemble(solutionName: String, targetModels: List<String>, resultsDir: Strin
 
         val model = Model(targetModel.size)
         val bot = Bot(1, Point(0, 0, 0), PersistentTreeSet.of(2..Config.maxBots))
-        val state = State(0, Harmonics.LOW, model, persistentTreeSetOf(bot))
+        val state = State(0, Harmonics.LOW, model, VolatileModel(), persistentTreeSetOf(bot))
 
         val system = System(state)
         val solution = when (solutionName) {
@@ -126,7 +126,7 @@ fun disassemble(solutionName: String, targetModels: List<String>, resultsDir: St
 
         val model = Model(targetModel.size)
         val bot = Bot(1, Point(0, 0, 0), PersistentTreeSet.of(2..Config.maxBots))
-        val state = State(0, Harmonics.LOW, model, persistentTreeSetOf(bot))
+        val state = State(0, Harmonics.LOW, model, VolatileModel(), persistentTreeSetOf(bot))
 
         val assembleSystem = System(state)
         val solution = when (solutionName) {
@@ -184,7 +184,7 @@ fun resassemble(solutionName: String, targetModels: List<String>, resultsDir: St
 
         val smodel = Model(sourceModel.size)
         val sbot = Bot(1, Point(0, 0, 0), PersistentTreeSet.of(2..Config.maxBots))
-        val sstate = State(0, Harmonics.LOW, smodel, persistentTreeSetOf(sbot))
+        val sstate = State(0, Harmonics.LOW, smodel, VolatileModel(), persistentTreeSetOf(sbot))
 
         val sassembleSystem = System(sstate)
         val ssolution = when (solutionName) {
@@ -215,7 +215,7 @@ fun resassemble(solutionName: String, targetModels: List<String>, resultsDir: St
 
         val tmodel = Model(targetModel.size)
         val tbot = Bot(1, Point(0, 0, 0), PersistentTreeSet.of(2..Config.maxBots))
-        val tstate = State(0, Harmonics.LOW, tmodel, persistentTreeSetOf(tbot))
+        val tstate = State(0, Harmonics.LOW, tmodel, VolatileModel(), persistentTreeSetOf(tbot))
 
         val tassembleSystem = System(tstate)
         val tsolution = when (solutionName) {
