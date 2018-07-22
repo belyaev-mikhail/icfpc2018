@@ -61,6 +61,7 @@ object RectangleTask {
     operator fun invoke(rectangle: Rectangle, manager: BotManager): Task = buildSequence {
         val nothing = emptyMap<Bot, Command>()
         val bots = doWhileNotNull(nothing) { manager.reserve(4) }
+        manager.system.reserve(rectangle.points)
         val diff = NearCoordDiff(0, -1, 0)
         val p1 = rectangle.p1 + -diff // best code
         val p2 = rectangle.p2 + -diff // best code
@@ -88,6 +89,7 @@ object SectionTask {
     operator fun invoke(section: Section, manager: BotManager): Task = buildSequence<Map<Bot, Command>> {
         val nothing = emptyMap<Bot, Command>()
         val (bot1, bot2) = doWhileNotNull(nothing) { manager.reserve(2) }
+        manager.system.reserve(section.points)
         val diff = NearCoordDiff(0, -1, 0)
         val first = section.first + -diff // best code
         val second = section.second + -diff // best code
@@ -109,9 +111,11 @@ object VoxelTask {
     operator fun invoke(voxel: Voxel, manager: BotManager): Task = buildSequence {
         val nothing = emptyMap<Bot, Command>()
         val (bot) = doWhileNotNull(nothing) { manager.reserve(1) }
-        val goto = GoTo(bot, voxel.point, manager.system)
+        manager.system.reserve(voxel.points)
+        val diff = NearCoordDiff(0, -1, 0)
+        val goto = GoTo(bot, voxel.point + -diff, manager.system)
         goto.forEach { yield(it) }
-        yield(mapOf(bot to Fill(NearCoordDiff(0, -1, 0))))
+        yield(mapOf(bot to Fill(diff)))
         manager.release(listOf(bot))
     }.iterator()
 }
@@ -130,5 +134,18 @@ object GoTo {
         }
         system.release(trace)
         system.release(setOf(bot.position))
+    }.iterator()
+}
+
+object GoToBase {
+    operator fun invoke(system: System): Task = buildSequence {
+        val bots = system.currentState.bots.toList()
+        val points = Pair(Point.ZERO, Point(bots.size, 0, 0)).coords()
+        val goto: List<Task> = bots.zip(points).map { (bot, p) -> GoTo(bot, p, system) }
+        val default = mapOf(bots.first() to Wait)
+        val defaults: List<Map<Bot, Command>> = bots.drop(1).map { mapOf(it to Wait) }
+        goto.first().zipWithDefault(default, defaults, goto.drop(1)).asSequence()
+                .map { it.fold(emptyMap<Bot, Command>()) { acc, m -> acc + m } }
+                .forEach { yield(it) }
     }.iterator()
 }

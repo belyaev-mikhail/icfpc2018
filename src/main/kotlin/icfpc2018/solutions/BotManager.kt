@@ -10,8 +10,10 @@ typealias Task = Iterator<Map<Bot, Command>>
 
 class CollisionError : Exception()
 
-class BotManager(bots: List<Bot>, val system: System) {
-    private val botPool = ArrayList<Bot>(bots)
+class DeadLockError : Exception()
+
+class BotManager(val system: System) {
+    private val botPool = ArrayList<Bot>(system.currentState.bots)
 
     private val taskPool = ArrayList<Task>()
 
@@ -46,6 +48,12 @@ class BotManager(bots: List<Bot>, val system: System) {
             if (bot in commands) throw CollisionError()
             commands[bot] = Wait
         }
+        if (commands.values.all { it === Wait }) throw DeadLockError()
         system.timeStep(commands.values.toList())
+    }
+
+    fun apply() {
+        while (taskPool.isNotEmpty())
+            timeStep()
     }
 }
