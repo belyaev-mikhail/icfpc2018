@@ -4,7 +4,6 @@ import icfpc2018.bot.commands.*
 import icfpc2018.bot.state.*
 import icfpc2018.solutions.BotManager
 import icfpc2018.solutions.Solution
-import icfpc2018.solutions.Task
 import icfpc2018.solutions.linearFission
 
 
