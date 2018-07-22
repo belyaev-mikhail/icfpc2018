@@ -28,8 +28,10 @@ class RegionSolution(val target: Model, val system: System) : Solution {
     override fun solve() {
         linearFission()
         flipTo(Harmonics.HIGH)
-        for (i in 1..target.box.top) {
+        for (i in 0 until target.box.top) {
             layer(regions[i])
+            if (i != target.box.top - 2)
+                goToBase()
         }
         flipTo(Harmonics.LOW)
         goToBase()
@@ -77,7 +79,7 @@ class RegionSolution(val target: Model, val system: System) : Solution {
 
     private fun goToBase() {
         val manager = BotManager(system)
-        manager.add(GoToBase(system))
+        manager.add(GoToBase(system, manager))
         manager.apply()
     }
 

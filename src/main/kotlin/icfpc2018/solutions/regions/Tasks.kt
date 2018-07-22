@@ -7,6 +7,7 @@ import icfpc2018.bot.commands.*
 import icfpc2018.bot.state.*
 import icfpc2018.solutions.BotManager
 import icfpc2018.solutions.Task
+import icfpc2018.solutions.botPairs
 import kotlin.coroutines.experimental.SequenceBuilder
 import kotlin.coroutines.experimental.buildSequence
 
@@ -21,17 +22,23 @@ suspend fun <T, C> SequenceBuilder<C>.doWhileNotNull(default: C, foo: () -> T?):
 
 fun <T, C> Iterator<T>.zipWithDefault(default1: T, default2: C, other: Iterator<C>): Iterator<Pair<T, C>> = buildSequence {
     while (hasNext() && other.hasNext()) {
-        val v1 = next()
-        val v2 = other.next()
-        yield(Pair(v1, v2))
+        yieldAll(buildSequence{
+            val v1 = next()
+            val v2 = other.next()
+            yield(Pair(v1, v2))
+        })
     }
     while (hasNext()) {
-        val v1 = next()
-        yield(Pair(v1, default2))
+        yieldAll(buildSequence{
+            val v1 = next()
+            yield(Pair(v1, default2))
+        })
     }
     while (other.hasNext()) {
-        val v2 = other.next()
-        yield(Pair(default1, v2))
+        yieldAll(buildSequence{
+            val v2 = other.next()
+            yield(Pair(default1, v2))
+        })
     }
 }.iterator()
 
@@ -73,10 +80,10 @@ object RectangleTask {
         goto.first().zipWithDefault(default, defaults, goto.drop(1)).asSequence()
                 .map { it.fold(emptyMap<Bot, Command>()) { acc, m -> acc + m } }
                 .forEach { yield(it) }
-        val diff1 = (p1 - rectangle.p3).toFarCoordDiff()
-        val diff2 = (p2 - rectangle.p4).toFarCoordDiff()
-        val diff3 = (p3 - rectangle.p1).toFarCoordDiff()
-        val diff4 = (p4 - rectangle.p2).toFarCoordDiff()
+        val diff1 = (rectangle.p3 - rectangle.p1).toFarCoordDiff()
+        val diff2 = (rectangle.p4 - rectangle.p2).toFarCoordDiff()
+        val diff3 = (rectangle.p1 - rectangle.p3).toFarCoordDiff()
+        val diff4 = (rectangle.p2 - rectangle.p4).toFarCoordDiff()
         val diffs = listOf(diff1, diff2, diff3, diff4)
         val commands = bots.zip(diffs).map { (bot, d) -> bot to GFill(diff, d) }.toMap()
         yield(commands)
@@ -101,8 +108,8 @@ object SectionTask {
         goto1.zipWithDefault(default1, default2, goto2).asSequence()
                 .map { (c1, c2) -> c1 + c2 }
                 .forEach { yield(it) }
-        val diff1 = (first - section.second).toFarCoordDiff()
-        val diff2 = (second - section.first).toFarCoordDiff()
+        val diff1 = (section.second - section.first).toFarCoordDiff()
+        val diff2 = (section.first - section.second).toFarCoordDiff()
         yield(mapOf(bot1 to GFill(diff, diff1), bot2 to GFill(diff, diff2)))
         manager.release(listOf(bot1, bot2))
     }.iterator()
@@ -213,14 +220,15 @@ private operator fun CoordDiff.plus(b: CoordDiff): CoordDiff =
         CoordDiff(dx + b.dx, dy + b.dy, dz + b.dz)
 
 object GoToBase {
-    operator fun invoke(system: System): Task = buildSequence {
-        val bots = system.currentState.bots.toList()
-        val points = Pair(Point.ZERO, Point(bots.size, 0, 0)).coords()
+    operator fun invoke(system: System, manager: BotManager): Task = buildSequence {
+        val points = Pair(Point.ZERO, Point(system.numBots, 0, 0)).coords()
+        val bots =  manager.reserve(system.numBots) ?: throw IllegalStateException("wtf")
         val goto: List<Task> = bots.zip(points).map { (bot, p) -> GoTo(bot, p, system) }
         val default = mapOf(bots.first() to Wait)
         val defaults: List<Map<Bot, Command>> = bots.drop(1).map { mapOf(it to Wait) }
         goto.first().zipWithDefault(default, defaults, goto.drop(1)).asSequence()
                 .map { it.fold(emptyMap<Bot, Command>()) { acc, m -> acc + m } }
                 .forEach { yield(it) }
+        manager.release(bots)
     }.iterator()
 }

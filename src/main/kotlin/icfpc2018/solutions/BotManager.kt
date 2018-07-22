@@ -55,7 +55,8 @@ class BotManager(val system: System) {
                 throw CollisionError()
             commands[bot] = Wait
         }
-        if (commands.values.all { it === Wait }) throw DeadLockError()
+        if (!taskPool.isEmpty() && commands.values.all { it === Wait })
+            throw DeadLockError()
         system.timeStep(commands.values.toList())
     }
 

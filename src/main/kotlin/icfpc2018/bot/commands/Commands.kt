@@ -56,7 +56,7 @@ interface Command {
                 val sld2a = when {
                     sld2.dx != 0 -> 1
                     sld2.dy != 0 -> 2
-                    sld2.dz != 0 -> 2
+                    sld2.dz != 0 -> 3
                     else -> throw IllegalArgumentException()
                 }
                 val sld2i = sld2.dx + sld2.dy + sld2.dz + 5
@@ -64,7 +64,7 @@ interface Command {
                 val sld1a = when {
                     sld1.dx != 0 -> 1
                     sld1.dy != 0 -> 2
-                    sld1.dz != 0 -> 2
+                    sld1.dz != 0 -> 3
                     else -> throw IllegalArgumentException()
                 }
                 val sld1i = sld1.dx + sld1.dy + sld1.dz + 5
@@ -96,16 +96,16 @@ interface Command {
             is GFill -> {
                 val nd = (nd.dx + 1) * 9 + (nd.dy + 1) * 3 + nd.dz + 1
                 stream.write("${nd.toBinary(5)}001".toInt(2))
-                stream.write(fd.dx)
-                stream.write(fd.dy)
-                stream.write(fd.dz)
+                stream.write(fd.dx + 30)
+                stream.write(fd.dy + 30)
+                stream.write(fd.dz + 30)
             }
             is GVoid -> {
                 val nd = (nd.dx + 1) * 9 + (nd.dy + 1) * 3 + nd.dz + 1
                 stream.write("${nd.toBinary(5)}000".toInt(2))
-                stream.write(fd.dx)
-                stream.write(fd.dy)
-                stream.write(fd.dz)
+                stream.write(fd.dx + 30)
+                stream.write(fd.dy + 30)
+                stream.write(fd.dz + 30)
             }
         }
     }
@@ -204,9 +204,9 @@ interface Command {
                             val dz = nd % 3 - 1
                             val dy = (nd / 3) % 3 - 1
                             val dx = nd / 9 - 1
-                            val fdx = bits.readBits(8).toInt()
-                            val fdy = bits.readBits(8).toInt()
-                            val fdz = bits.readBits(8).toInt()
+                            val fdx = bits.readBits(8).toInt() - 30
+                            val fdy = bits.readBits(8).toInt() - 30
+                            val fdz = bits.readBits(8).toInt() - 30
                             GFill(NearCoordDiff(dx, dy, dz), FarCoordDiff(fdx, fdy, fdz))
                         }
 
@@ -215,9 +215,9 @@ interface Command {
                             val dz = nd % 3 - 1
                             val dy = (nd / 3) % 3 - 1
                             val dx = nd / 9 - 1
-                            val fdx = bits.readBits(8).toInt()
-                            val fdy = bits.readBits(8).toInt()
-                            val fdz = bits.readBits(8).toInt()
+                            val fdx = bits.readBits(8).toInt() - 30
+                            val fdy = bits.readBits(8).toInt() - 30
+                            val fdz = bits.readBits(8).toInt() - 30
                             GVoid(NearCoordDiff(dx, dy, dz), FarCoordDiff(fdx, fdy, fdz))
                         }
 
