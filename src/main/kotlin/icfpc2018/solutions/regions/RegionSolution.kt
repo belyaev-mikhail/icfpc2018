@@ -27,15 +27,16 @@ class RegionSolution(val target: Model, val system: System) : Solution {
 
     override fun solve() {
         linearFission()
-        flipTo(Harmonics.HIGH)
-        for (i in 0 until target.box.top) {
+ //       flipTo(Harmonics.HIGH)
+        for (i in 0 .. target.box.top) {
             layer(regions[i])
-            if (i != target.box.top - 2)
-                goToBase()
+//            if (i != target.box.top - 2)
+//                goToBase()
         }
-        flipTo(Harmonics.LOW)
+  //      flipTo(Harmonics.LOW)
         goToBase()
         merge(1)
+        goToBase()
         halt()
     }
 
@@ -83,7 +84,10 @@ class RegionSolution(val target: Model, val system: System) : Solution {
         manager.apply()
     }
 
-    private fun halt() = system.timeStep(listOf(Halt))
+    private fun halt() {
+        system.timeStep(listOf(Halt))
+    }
+
 
     companion object {
         private fun Section.toVoxelIfCan() = if (first == second) Voxel(first) else this

@@ -537,7 +537,7 @@ data class GFillT(val components: List<GFill>) : GroupCommand {
             }
             res = res.copy(
                     energy = newEnergy,
-                    matrix = if (shouldUpdate) state.matrix.set(coord) else state.matrix
+                    matrix = if (shouldUpdate) res.matrix.set(coord) else res.matrix
             )
         }
         return res
@@ -629,7 +629,7 @@ data class GVoidT(val components: List<GVoid>) : GroupCommand {
             }
             res = res.copy(
                     energy = newEnergy,
-                    matrix = if (shouldUpdate) state.matrix.unset(coord) else state.matrix
+                    matrix = if (shouldUpdate) res.matrix.unset(coord) else res.matrix
             )
         }
         return res
