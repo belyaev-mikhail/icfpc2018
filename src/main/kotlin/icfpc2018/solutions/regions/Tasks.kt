@@ -54,10 +54,6 @@ fun <T> Iterator<T>.zipWithDefault(default: T, defaults: List<T>, other: List<It
     }
 }.iterator()
 
-suspend fun <T> SequenceBuilder<T>.end(default: T) = yield(default)
-
-suspend fun SequenceBuilder<Map<Bot, Command>>.end() = end(emptyMap())
-
 object RectangleTask {
     operator fun invoke(rectangle: Rectangle, manager: BotManager): Task = buildSequence {
         val nothing = emptyMap<Bot, Command>()
@@ -85,7 +81,6 @@ object RectangleTask {
         val commands = bots.zip(diffs).map { (bot, d) -> bot to GFill(diff, d) }.toMap()
         yield(commands)
         manager.release(bots)
-        end()
     }.iterator()
 }
 
@@ -110,7 +105,6 @@ object SectionTask {
         val diff2 = (second - section.first).toFarCoordDiff()
         yield(mapOf(bot1 to GFill(diff, diff1), bot2 to GFill(diff, diff2)))
         manager.release(listOf(bot1, bot2))
-        end()
     }.iterator()
 }
 
@@ -124,7 +118,6 @@ object VoxelTask {
         goto.forEach { yield(it) }
         yield(mapOf(bot to Fill(diff)))
         manager.release(listOf(bot))
-        end()
     }.iterator()
 }
 
@@ -213,7 +206,6 @@ object GoTo {
             yield(mapOf(bot to command))
         }
         system.release(trace)
-        end()
     }.iterator()
 }
 
@@ -230,6 +222,5 @@ object GoToBase {
         goto.first().zipWithDefault(default, defaults, goto.drop(1)).asSequence()
                 .map { it.fold(emptyMap<Bot, Command>()) { acc, m -> acc + m } }
                 .forEach { yield(it) }
-        end()
     }.iterator()
 }
