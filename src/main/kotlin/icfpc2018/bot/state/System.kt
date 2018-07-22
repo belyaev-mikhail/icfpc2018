@@ -38,8 +38,28 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
         currentState = stateTrace.last()
     }
 
+    fun reserve(region: Iterable<Point>): Boolean {
+        if(region.any { currentState.volatileModel[it] }) return false
+
+        val volatileModel = currentState.volatileModel.set(region)
+        val state = currentState.copy(volatileModel = volatileModel)
+        stateTrace.add(state)
+        currentState = state
+        return true
+
+    }
+
+    fun release(region: Iterable<Point>) {
+        val volatileModel = currentState.volatileModel.unset(region)
+        val state = currentState.copy(volatileModel = volatileModel)
+        stateTrace.add(state)
+        currentState = state
+    }
+
     open fun timeStep(commands: List<Command>): Boolean {
         if (currentState.bots.isEmpty()) throw ExecutionError()
+
+        commandTrace.addAll(commands)
 
         var energy = currentState.energy
 
@@ -52,66 +72,7 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
 
         var execState = currentState.copy(energy = energy)
 
-        val fusionPrimary = mutableListOf<Pair<Bot, FusionP>>()
-        val fusionSecondary = mutableListOf<Pair<Bot, FusionS>>()
-        val gFills = mutableListOf<Pair<Bot, GFill>>()
-        val gVoids = mutableListOf<Pair<Bot, GVoid>>()
-
-        val simpleCommands = mutableListOf<Pair<Bot, SimpleCommand>>()
-
-        for ((bot, cmd) in currentState.bots.zip(commands)) {
-            when (cmd) {
-                is FusionP -> {
-                    fusionPrimary.add(bot to cmd)
-                }
-                is FusionS -> {
-                    fusionSecondary.add(bot to cmd)
-                }
-                is GFill -> {
-                    gFills.add(bot to cmd)
-                }
-                is GVoid -> {
-                    gVoids.add(bot to cmd)
-                }
-                is SimpleCommand -> {
-                    simpleCommands.add(bot to cmd)
-                }
-                is GroupCommand -> throw UnsupportedGroupCommandError()
-            }
-            commandTrace.add(cmd)
-        }
-
-        if (fusionPrimary.size != fusionSecondary.size) throw GroupCommandError()
-
-        val groupedCommands = mutableListOf<Pair<List<Bot>, GroupCommand>>()
-
-        for ((botP, cmdP) in fusionPrimary) {
-            for ((botS, cmdS) in fusionSecondary) {
-                val posP = botP.position + cmdP.nd
-                val posS = botS.position + cmdS.nd
-                if (posP == botS.position && posS == botP.position) {
-                    groupedCommands.add(listOf(botP, botS) to FusionT(cmdP, cmdS))
-                }
-            }
-        }
-
-        val regionGFill = gFills.groupBy {
-            (it.first.position + it.second.nd to it.first.position + it.second.nd + it.second.fd).normalize()
-        }
-
-        val regionGVoid = gVoids.groupBy {
-            (it.first.position + it.second.nd to it.first.position + it.second.nd + it.second.fd).normalize()
-        }
-
-        for ((region, data) in regionGFill) {
-            val (bots, components) = data.unzip()
-            groupedCommands.add(bots to GFillT(components))
-        }
-
-        for ((region, data) in regionGVoid) {
-            val (bots, components) = data.unzip()
-            groupedCommands.add(bots to GVoidT(components))
-        }
+        val (simpleCommands, groupedCommands) = degroup(commands)
 
         val volatileCoords = mutableMapOf<Point, Pair<List<Bot>, Command>>()
 
@@ -152,5 +113,68 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
             throw GroundError()
 
         return true
+    }
+
+    fun degroup(commands: List<Command>): Pair<MutableList<Pair<Bot, SimpleCommand>>, MutableList<Pair<List<Bot>, GroupCommand>>> {
+        val fusionPrimary = mutableListOf<Pair<Bot, FusionP>>()
+        val fusionSecondary = mutableListOf<Pair<Bot, FusionS>>()
+        val gFills = mutableListOf<Pair<Bot, GFill>>()
+        val gVoids = mutableListOf<Pair<Bot, GVoid>>()
+
+        val simpleCommands = mutableListOf<Pair<Bot, SimpleCommand>>()
+
+        for ((bot, cmd) in currentState.bots.zip(commands)) {
+            when (cmd) {
+                is FusionP -> {
+                    fusionPrimary.add(bot to cmd)
+                }
+                is FusionS -> {
+                    fusionSecondary.add(bot to cmd)
+                }
+                is GFill -> {
+                    gFills.add(bot to cmd)
+                }
+                is GVoid -> {
+                    gVoids.add(bot to cmd)
+                }
+                is SimpleCommand -> {
+                    simpleCommands.add(bot to cmd)
+                }
+                is GroupCommand -> throw UnsupportedGroupCommandError()
+            }
+        }
+
+        if (fusionPrimary.size != fusionSecondary.size) throw GroupCommandError()
+
+        val groupedCommands = mutableListOf<Pair<List<Bot>, GroupCommand>>()
+
+        for ((botP, cmdP) in fusionPrimary) {
+            for ((botS, cmdS) in fusionSecondary) {
+                val posP = botP.position + cmdP.nd
+                val posS = botS.position + cmdS.nd
+                if (posP == botS.position && posS == botP.position) {
+                    groupedCommands.add(listOf(botP, botS) to FusionT(cmdP, cmdS))
+                }
+            }
+        }
+
+        val regionGFill = gFills.groupBy {
+            (it.first.position + it.second.nd to it.first.position + it.second.nd + it.second.fd).normalize()
+        }
+
+        val regionGVoid = gVoids.groupBy {
+            (it.first.position + it.second.nd to it.first.position + it.second.nd + it.second.fd).normalize()
+        }
+
+        for ((region, data) in regionGFill) {
+            val (bots, components) = data.unzip()
+            groupedCommands.add(bots to GFillT(components))
+        }
+
+        for ((region, data) in regionGVoid) {
+            val (bots, components) = data.unzip()
+            groupedCommands.add(bots to GVoidT(components))
+        }
+        return Pair(simpleCommands, groupedCommands)
     }
 }

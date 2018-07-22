@@ -8,6 +8,7 @@ import icfpc2018.bot.state.Harmonics.LOW
 import icfpc2018.bot.util.minus
 import icfpc2018.bot.util.plus
 import org.apache.commons.compress.utils.BitInputStream
+import org.organicdesign.fp.collections.PersistentHashSet
 import org.organicdesign.fp.collections.PersistentTreeSet
 import java.io.InputStream
 import java.io.OutputStream
@@ -21,8 +22,17 @@ inline fun sbb(number: Int, from: Int, to: Int) = (((1 shl (to - from + 1)) - 1)
 inline fun Int.subBits(range: IntRange) = sbb(this, 7 - range.endInclusive, 7 - range.start)
 inline fun Long.subBits(range: IntRange) = toInt().subBits(range)
 
-inline fun Int.endsWithBits(bits: Int) = this and bits == bits
-inline fun Long.endsWithBits(bits: Int) = this.toInt() and bits == bits
+inline fun Int.endsWithBits(bits: Int): Boolean {
+    val maskSize = java.lang.Long.highestOneBit(bits.toLong())
+    val mask = (1 shl (maskSize + 1).toInt()) - 1
+    return (this and mask) == bits
+}
+
+inline fun Long.endsWithBits(bits: Int): Boolean {
+    val maskSize = 64L - java.lang.Long.numberOfLeadingZeros(bits.toLong())
+    val mask = (1 shl maskSize.toInt()) - 1
+    return (this.toInt() and mask) == bits
+}
 
 interface Command {
     fun write(stream: OutputStream) {
@@ -399,7 +409,7 @@ data class Fission(val nd: NearCoordDiff, val m: Int) : SimpleCommand {
         )
     }
 
-    override fun inverse(bots: Array<Bot>): Command = FusionT(FusionP(nd), FusionS(-nd))
+    override fun inverse(bots: Array<Bot>) = FusionT(FusionP(nd), FusionS(-nd))
 }
 
 data class Fill(val nd: NearCoordDiff) : SimpleCommand {
@@ -497,10 +507,9 @@ data class FusionT(val p: FusionP, val s: FusionS) : GroupCommand {
 
     override fun inverse(bots: Array<Bot>): Command {
         require(bots.size == 2)
-        val botP = bots.minBy { it.id }!!
-        val botS = bots.maxBy { it.id }!!
+        val (botP, botS) = bots
         require(Math.abs(botP.id - botS.id) == 1)
-        val m = botP.seeds.firstOrNull() ?: 0
+        val m = botS.seeds.size
         return Fission(p.nd, m)
     }
 }
@@ -592,7 +601,8 @@ data class GFillT(val components: List<GFill>) : GroupCommand {
         }
     }
 
-    override fun inverse(bots: Array<Bot>): Command = GVoidT(components.map { it.inverse(arrayOf()) })
+    override fun inverse(bots: Array<Bot>) =
+            GVoidT(components.map { it.inverse(Array(0){ Bot(0, Point.ZERO, PersistentTreeSet.empty<Int>()) }) })
 }
 
 data class GVoid(val nd: NearCoordDiff, val fd: FarCoordDiff) : SimpleCommand {

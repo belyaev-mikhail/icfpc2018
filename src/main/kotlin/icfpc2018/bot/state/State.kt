@@ -17,7 +17,16 @@ data class Bot(val id: Int, val position: Point, val seeds: ImSortedSet<Int>) : 
     override fun compareTo(other: Bot): Int = id - other.id
 }
 
-data class State(val energy: Long, val harmonics: Harmonics, val matrix: Model, val bots: PersistentTreeSet<Bot>)
+data class State(
+        val energy: Long,
+        val harmonics: Harmonics,
+        val matrix: Model,
+        val volatileModel: VolatileModel,
+        val bots: PersistentTreeSet<Bot>
+) {
+    fun canMoveTo(p: Point) =
+            p.inRange(matrix) && !matrix[p] && !volatileModel[p] && bots.none { it.position == p }
+}
 
 data class Point(val x: Int, val y: Int, val z: Int) {
     companion object {
@@ -61,6 +70,10 @@ open class CoordDiff(val dx: Int, val dy: Int, val dz: Int) {
     override fun toString(): String {
         return "CoordDiff(dx=$dx, dy=$dy, dz=$dz)"
     }
+
+    fun toLinear(): LinearCoordDiff = LinearCoordDiff(dx, dy, dz)
+    fun toLong(): LongCoordDiff = LongCoordDiff(dx, dy, dz)
+    fun toShort(): ShortCoordDiff = ShortCoordDiff(dx, dy, dz)
 }
 
 operator fun Point.plus(cd: CoordDiff) = Point(x + cd.dx, y + cd.dy, z + cd.dz)
@@ -162,7 +175,19 @@ class ShortCoordDiff(dx: Int = 0, dy: Int = 0, dz: Int = 0) : LinearCoordDiff(dx
     init {
         assert(mlen <= 5)
     }
+
+    companion object {
+        fun fromAxis(axis: Axis, length: Int): ShortCoordDiff {
+            return when (axis) {
+                Axis.X -> ShortCoordDiff(length, 0, 0)
+                Axis.Y -> ShortCoordDiff(0, length, 0)
+                Axis.Z -> ShortCoordDiff(0, 0, length)
+            }
+        }
+    }
 }
+
+fun ShortCoordDiff.toLong() = LongCoordDiff(dx, dy, dz)
 
 operator fun ShortCoordDiff.unaryMinus() = ShortCoordDiff(-dx, -dy, -dz)
 
@@ -184,6 +209,8 @@ class FarCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
         assert(clen in 1..30)
     }
 }
+
+fun CoordDiff.toFarCoordDiff() = FarCoordDiff(dx, dy, dz)
 
 typealias Region = Pair<Point, Point>
 

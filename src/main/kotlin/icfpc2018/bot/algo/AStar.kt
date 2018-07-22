@@ -27,10 +27,10 @@ class AStar<T>(
     }
 
     val closed: MutableSet<History> = mutableSetOf()
-    val open: PriorityQueue<History> = PriorityQueue(Comparator.comparing(AStar<T>.History::score).reversed())
+    val open: PriorityQueue<History> = PriorityQueue(Comparator.comparing(AStar<T>.History::score))
     val roots: MutableMap<T, History> = mutableMapOf()
 
-    fun run(start: T): History {
+    fun run(start: T): History? {
         open += History(start)
         while(open.isNotEmpty()) {
             val current = open.remove()
@@ -52,7 +52,7 @@ class AStar<T>(
                 roots[neighbour] = hist
             }
         }
-        throw IllegalStateException()
+        return null
     }
 
 
