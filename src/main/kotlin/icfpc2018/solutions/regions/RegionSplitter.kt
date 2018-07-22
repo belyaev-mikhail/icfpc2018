@@ -162,10 +162,3 @@ class RegionSplitter(val target: Model, val system: System) {
 
     }
 }
-
-fun main(args: Array<String>) {
-    val filename = "models/FA004_tgt.mdl"
-    val targetModelFile = File(filename).inputStream()
-    val targetModel = Model.readMDL(targetModelFile)
-    RegionSplitter.split(targetModel)
-}
