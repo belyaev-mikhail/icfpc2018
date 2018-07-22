@@ -47,7 +47,12 @@ fun main(args: Array<String>) {
         }
         log.info(solution::class.java.name)
 
-        solution.solve()
+        try {
+            solution.solve()
+        } catch (e: Exception) {
+            log.error("Solution $solution throwed exception $e")
+            continue
+        }
 
         log.info { "Energy: " + system.currentState.energy }
 
