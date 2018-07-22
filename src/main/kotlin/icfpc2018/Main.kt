@@ -295,6 +295,5 @@ fun main(args: Array<String>) {
         RunMode.DISASSEMBLE -> disassemble(arguments.getSolution(), arguments.getModels(), arguments.getResults())
         RunMode.REASSEMBLE -> resassemble(arguments.getSolution(), arguments.getModels(), arguments.getResults())
         RunMode.SUBMIT -> submit(arguments.getSubmitDirectories())
-        else -> throw IllegalArgumentException()
     }
 }

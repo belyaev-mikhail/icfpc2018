@@ -109,6 +109,6 @@ class ZipWriter {
     private inner class ZipParsingException(reason: String, inner: Exception) : RuntimeException(reason, inner)
 
     companion object {
-        val OUTPUT_ZIP = "submitChecked.zip"
+        val OUTPUT_ZIP = "submit.zip"
     }
 }
