@@ -8,10 +8,16 @@ import icfpc2018.solutions.trace.Trace
 import org.organicdesign.fp.collections.PersistentTreeSet
 import java.io.File
 import java.io.FileOutputStream
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
-fun readModel(name: String): Model {
-    val targetModelFile = File("models/${name}_tgt.mdl").inputStream()
-    return Model.readMDL(targetModelFile)
+fun getModeByModelName(name: String): RunMode {
+    val start = name.take(2)
+    return when (start) {
+        "FA" -> RunMode.ASSEMBLE
+        "FD" -> RunMode.DISASSEMBLE
+        else -> RunMode.REASSEMBLE
+    }
 }
 
 fun writeTraceFile(system: System, directory: String, name: String) {
@@ -25,39 +31,60 @@ fun submit(resultDirs: List<String>) {
     val results = resultDirs.map { Results.readFromDirectory(it) }
     val merged = results.reduce { acc, res -> acc.merge(res) }
     for ((task, result) in merged) {
-        val targetModel = readModel(task)
+        val bestSolution = result.getSortedSolutions().first().second
+        Files.copy(File(bestSolution.trace).toPath(), File("submit/$task.nbt").toPath(),
+                StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES)
+    }
+    ZipWriter().createZip("submit/")
+}
 
-        val model = Model(targetModel.size)
-        val bot = Bot(1, Point(0, 0, 0), PersistentTreeSet.of(2..Config.maxBots))
-        val state = State(0, Harmonics.LOW, model, persistentTreeSetOf(bot))
-
-        var haveSolution = false
-        for ((solutionName, solution) in result.getSortedSolutions()) {
-            val traceFile = File(solution.trace).inputStream()
-            val commands: MutableList<Command> = mutableListOf()
-            while (traceFile.available() != 0) {
-                commands += Command.read(traceFile)
+fun submitChecked(resultDirs: List<String>) {
+    val results = resultDirs.map { Results.readFromDirectory(it) }
+    val merged = results.reduce { acc, res -> acc.merge(res) }
+    for ((task, result) in merged) {
+        val mode = getModeByModelName(task)
+        if (mode == RunMode.REASSEMBLE) {
+            val bestSolution = result.getSortedSolutions().first().second
+            Files.copy(File(bestSolution.trace).toPath(), File("submit/$task.nbt").toPath(),
+                    StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES)
+        } else {
+            val targetModel = when (mode) {
+                RunMode.ASSEMBLE -> Model.readMDL(File("models/${task}_tgt.mdl").inputStream())
+                else -> Model.readMDL(File("models/${task}_src.mdl").inputStream())
             }
-            val system = System(state)
-            try {
-                Trace(commands, system).solve()
-            } catch (e: Exception) {
-                log.info("Solution $solutionName failed on task $task (trace ${solution.trace}): exception $e")
-                continue
-            }
+            val model = Model(targetModel.size)
+            val bot = Bot(1, Point(0, 0, 0), PersistentTreeSet.of(2..Config.maxBots))
+            val state = State(0, Harmonics.LOW, model, persistentTreeSetOf(bot))
 
-            if (system.currentState.matrix != targetModel) {
-                log.info("Solution $solutionName failed on task $task (trace ${solution.trace}): resulting model is not complete")
-                continue
-            }
+            var haveSolution = false
+            for ((solutionName, solution) in result.getSortedSolutions()) {
+                val traceFile = File(solution.trace).inputStream()
+                val commands: MutableList<Command> = mutableListOf()
+                while (traceFile.available() != 0) {
+                    commands += Command.read(traceFile)
+                }
+                val system = System(state)
+                try {
+                    Trace(commands, system).solve()
+                } catch (e: Exception) {
+                    log.info("Solution $solutionName failed on task $task (trace ${solution.trace}): exception $e")
+                    continue
+                }
 
-            writeTraceFile(system, "submit", task)
-            haveSolution = true
-            break
-        }
-        if (!haveSolution) {
-            log.error("Have no solution for task $task to submit")
-            return
+                if (system.currentState.matrix != targetModel) {
+                    log.info("Solution $solutionName failed on task $task (trace ${solution.trace}): resulting model is not complete")
+                    continue
+                }
+
+                Files.copy(File(solution.trace).toPath(), File("submit/$task.nbt").toPath(),
+                        StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES)
+                haveSolution = true
+                break
+            }
+            if (!haveSolution) {
+                log.error("Have no solution for task $task to submit")
+                return
+            }
         }
     }
 
