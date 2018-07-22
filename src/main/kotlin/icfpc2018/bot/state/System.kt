@@ -38,6 +38,20 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
         currentState = stateTrace.last()
     }
 
+    fun reserve(region: Set<Point>) {
+        val volatileModel = currentState.volatileModel.set(region)
+        val state = currentState.copy(volatileModel = volatileModel)
+        stateTrace.add(state)
+        currentState = state
+    }
+
+    fun release(region: Set<Point>) {
+        val volatileModel = currentState.volatileModel.unset(region)
+        val state = currentState.copy(volatileModel = volatileModel)
+        stateTrace.add(state)
+        currentState = state
+    }
+
     open fun timeStep(commands: List<Command>): Boolean {
         if (currentState.bots.isEmpty()) throw ExecutionError()
 
