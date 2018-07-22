@@ -8,6 +8,8 @@ enum class Mode {
 
 class ExecutionError : Exception()
 
+class UnsupportedGroupCommandError : Exception()
+
 class GroupCommandError : Exception()
 
 class VolatileCoordError(msg: String) : Exception(msg)
@@ -120,6 +122,7 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
                 is SimpleCommand -> {
                     simpleCommands.add(bot to cmd)
                 }
+                is GroupCommand -> throw UnsupportedGroupCommandError()
             }
         }
 
