@@ -14,11 +14,19 @@ class Arguments(args: Array<String>) {
     private val options = Options()
     private val cmd: CommandLine
 
-    private val bounds = mapOf(
-            RunMode.ASSEMBLE to (1 to 186),
-            RunMode.DISASSEMBLE to (1 to 186),
-            RunMode.REASSEMBLE to (1 to 115)
-    )
+    companion object {
+        val bounds = mapOf(
+                RunMode.ASSEMBLE to (1 to 186),
+                RunMode.DISASSEMBLE to (1 to 186),
+                RunMode.REASSEMBLE to (1 to 115)
+        )
+
+        val modelNames = mapOf(
+                RunMode.ASSEMBLE to "FA%03d",
+                RunMode.DISASSEMBLE to "FD%03d",
+                RunMode.REASSEMBLE to "FR%03d"
+        )
+    }
 
     init {
         setupOptions()
@@ -103,7 +111,11 @@ class Arguments(args: Array<String>) {
         }
     }
 
-    fun getModels(): List<String> = getModelNums().map { "FA%03d".format(it) }
+    fun getModels(): List<String> {
+        val mode = getMode()
+        val format = modelNames.getValue(mode)
+        return getModelNums().map { format.format(it) }
+    }
 
     fun getValue(name: String): String? = cmd.getOptionValue(name)
     fun getValue(name: String, default: String) = getValue(name) ?: default
