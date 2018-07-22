@@ -5,6 +5,7 @@ import icfpc2018.bot.state.*
 import icfpc2018.solutions.BotManager
 import icfpc2018.solutions.Solution
 import icfpc2018.solutions.linearFission
+import icfpc2018.solutions.sections.indices
 
 
 class RegionSolution(val target: Model, val system: System) : Solution {
@@ -70,8 +71,38 @@ class RegionSolution(val target: Model, val system: System) : Solution {
     private fun halt() = system.timeStep(listOf(Halt))
 
     companion object {
+        private fun Section.toVoxelIfCan() = if (first == second) Voxel(first) else this
+
         fun split(model: Model): List<List<Region>> {
-            return emptyList()
+            val regions = ArrayList<List<Region>>()
+            for (y in model.indices) {
+                val layer = ArrayList<Region>()
+                for (z in model.indices) {
+                    val strawSections = ArrayList<Section>()
+                    var begin: Point? = null
+                    for (x in model.indices) {
+                        val isFill = model[x, y, z]
+                        if (isFill && begin == null) {
+                            begin = Point(x, y, z)
+                        }
+                        if (!isFill && begin != null) {
+                            val end = Point(x - 1, y, z)
+                            val section = Section(begin, end)
+                            strawSections.add(section)
+                            begin = null
+                        }
+                    }
+                    if (begin != null) {
+                        val end = Point(model.size - 1, y, z)
+                        val section = Section(begin, end)
+                        strawSections.add(section)
+                    }
+                    val converted = strawSections.map { it.toVoxelIfCan() }
+                    layer.addAll(converted)
+                }
+                regions.add(layer)
+            }
+            return regions
         }
     }
 }
