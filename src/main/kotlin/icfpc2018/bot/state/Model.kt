@@ -31,19 +31,15 @@ data class VolatileModel(private val data: PersistentHashSet<Int> = PersistentHa
     }
 
     fun set(points: Set<Point>) = run {
-        var newData = data
-        for (point in points) {
-            newData = data.put(Model.convertCoordinates(point.x, point.y, point.z))
-        }
-        copy(data = newData)
+        val newData = data.mutable()
+        points.map { Model.convertCoordinates(it.x, it.y, it.z) }.forEach { newData.put(it) }
+        copy(data = newData.immutable())
     }
 
     fun unset(points: Set<Point>) = run {
-        var newData = data
-        for (point in points) {
-            newData = data.without(Model.convertCoordinates(point.x, point.y, point.z))
-        }
-        copy(data = newData)
+        val newData = data.mutable()
+        points.map { Model.convertCoordinates(it.x, it.y, it.z) }.forEach { newData.without(it) }
+        copy(data = newData.immutable())
     }
 
 }
