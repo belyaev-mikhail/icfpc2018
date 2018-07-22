@@ -59,6 +59,8 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
     open fun timeStep(commands: List<Command>): Boolean {
         if (currentState.bots.isEmpty()) throw ExecutionError()
 
+        val ts = timeStamp()
+
         commandTrace.addAll(commands)
 
         var energy = currentState.energy
@@ -104,13 +106,16 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
             execState = cmd.apply(bots, execState)
         }
 
+
         stateTrace.add(execState)
 
         currentState = execState
 
         if (currentState.harmonics == Harmonics.LOW &&
-                !currentState.matrix.isEverybodyGrounded)
+                !currentState.matrix.isEverybodyGrounded) {
+            rollBackTo(ts)
             throw GroundError()
+        }
 
         return true
     }

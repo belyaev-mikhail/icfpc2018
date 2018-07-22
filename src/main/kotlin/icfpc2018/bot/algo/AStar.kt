@@ -4,7 +4,7 @@ import java.util.*
 
 class AStar<T>(
         val neighbours: (T) -> Iterable<T>,
-        val heuristic: (T) -> Long,
+        val heuristic: (T) -> Int,
         val goal: (T) -> Boolean) {
 
     inner class History(val value: T, val len: Int = 0, val previous: History? = null) {
