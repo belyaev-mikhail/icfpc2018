@@ -14,6 +14,12 @@ class Arguments(args: Array<String>) {
     private val options = Options()
     private val cmd: CommandLine
 
+    private val bounds = mapOf(
+            RunMode.ASSEMBLE to (1 to 186),
+            RunMode.DISASSEMBLE to (1 to 186),
+            RunMode.REASSEMBLE to (1 to 115)
+    )
+
     init {
         setupOptions()
 
@@ -87,8 +93,9 @@ class Arguments(args: Array<String>) {
         val model = getValue("model")?.toInt()
         if (model != null) return listOf(model)
 
-        val from = getValue("from")?.toInt() ?: 1
-        val to = getValue("to")?.toInt() ?: 186
+        val mode = getMode()
+        val from = getValue("from")?.toInt() ?: bounds.getValue(mode).first
+        val to = getValue("to")?.toInt() ?: bounds.getValue(mode).second
 
         return when {
             isReversed() -> (from..to).reversed().toList()
