@@ -2,6 +2,7 @@ package icfpc2018.bot.state
 
 import org.apache.commons.compress.utils.BitInputStream
 import org.organicdesign.fp.collections.PersistentHashMap
+import org.organicdesign.fp.collections.PersistentHashSet
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -14,6 +15,37 @@ data class Box(val left: Int, val right: Int, val top: Int, val bottom: Int, val
     val width = right - left + 1
     val height = top - bottom + 1
     val depth = back - middle + 1
+}
+
+data class VolatileModel(private val data: PersistentHashSet<Int> = PersistentHashSet.empty()) {
+    operator fun get(point: Point) = get(point.x, point.y, point.z)
+    operator fun get(x: Int, y: Int, z: Int): Boolean = data.contains(Model.convertCoordinates(x, y, z))
+
+    fun intersects(points: Set<Point>) =
+            points.map { Model.convertCoordinates(it.x, it.y, it.z) }.any { data.contains(it) }
+
+    fun set(x: Int, y: Int, z: Int) = set(Point(x, y, z))
+
+    fun set(point: Point) = run {
+        copy(data = data.put(Model.convertCoordinates(point.x, point.y, point.z)))
+    }
+
+    fun set(points: Set<Point>) = run {
+        var newData = data
+        for (point in points) {
+            newData = data.put(Model.convertCoordinates(point.x, point.y, point.z))
+        }
+        copy(data = newData)
+    }
+
+    fun unset(points: Set<Point>) = run {
+        var newData = data
+        for (point in points) {
+            newData = data.without(Model.convertCoordinates(point.x, point.y, point.z))
+        }
+        copy(data = newData)
+    }
+
 }
 
 data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean> = PersistentHashMap.empty(),
@@ -40,7 +72,7 @@ data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean
         val isAlreadyGrounded = isGrounded(point)
         val isTriviallyGrounded = point.isTriviallyGrounded
         val res = copy(data = data.assoc(point.index, point.isTriviallyGrounded),
-                                numGrounded = if(!isAlreadyGrounded && isTriviallyGrounded) numGrounded + 1 else numGrounded)
+                numGrounded = if (!isAlreadyGrounded && isTriviallyGrounded) numGrounded + 1 else numGrounded)
         val mut = res.data.mutable()
         val newNumGrounded = res.propagateGroundness(point, mut)
         res.copy(data = mut.immutable(), numGrounded = newNumGrounded)
@@ -69,15 +101,15 @@ data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean
         val grounded = p.isTriviallyGrounded || mutableData[p.index] == true || neighbors.any { mutableData[it.index] == true }
         if (!grounded) return numGrounded
 
-        if(mutableData[p.index] == false) ++numGrounded
+        if (mutableData[p.index] == false) ++numGrounded
         mutableData.assoc(p.index, true)
 
         val notGroundedNeighbors = neighbors.filterNot { it.isTriviallyGrounded || mutableData[it.index] == true }
         val visited = notGroundedNeighbors.toMutableSet()
         val toProceed: Queue<Point> = ArrayDeque(notGroundedNeighbors)
-        while(toProceed.isNotEmpty()) {
+        while (toProceed.isNotEmpty()) {
             val e = toProceed.remove()
-            if(mutableData[e.index] == false) ++numGrounded
+            if (mutableData[e.index] == false) ++numGrounded
             mutableData.assoc(e.index, true)
             val notGroundedNeighbors = e.immediateNeighbours().filter {
                 it.inBounds && mutableData[it.index] == false && it !in visited
@@ -89,10 +121,10 @@ data class Model(val size: Int, private val data: PersistentHashMap<Int, Boolean
     }
 
     companion object {
-        private inline fun deconvertCoordinates(coord: Int) =
+        inline fun deconvertCoordinates(coord: Int) =
                 Point(coord % 256, (coord / 256) % 256, coord / (256 * 256))
 
-        private inline fun convertCoordinates(x: Int, y: Int, z: Int) = x + 256 * y + 256 * 256 * z
+        inline fun convertCoordinates(x: Int, y: Int, z: Int) = x + 256 * y + 256 * 256 * z
 
         fun readMDL(bs: InputStream): Model {
             val size = bs.read()
