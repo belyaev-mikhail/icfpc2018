@@ -4,6 +4,7 @@ import icfpc2018.bot.state.CoordDiff
 import icfpc2018.bot.state.Point
 import icfpc2018.bot.state.minus
 import icfpc2018.bot.state.plus
+import icfpc2018.bot.state.coords
 
 sealed class Region {
     abstract val points: Set<Point>
@@ -13,39 +14,29 @@ class StructureError : Exception()
 
 data class Rectangle(val p1: Point, val p2: Point, val p3: Point, val p4: Point) : Region() {
     override val points: Set<Point>
-        get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
+        get() = Pair(p1, p3).coords().toSet()
 
     init {
-        checkStructure() || throw StructureError()
+        Section(p1, p2)
+        Section(p2, p3)
+        Section(p3, p4)
+        Section(p4, p1)
     }
-
-    private fun checkStructure(): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-}
-
-enum class Direct {
-    X, Y, Z
 }
 
 data class Section(val first: Point, val second: Point) : Region() {
     override val points: Set<Point>
-        get(): Set<Point> {
-            val diff = first - second
-            val length = diff.clen
-            val atomDiff = CoordDiff(diff.dx / length, diff.dy / length, diff.dz / length)
-            return (0 until length).map { first + atomDiff }.toSet()
-        }
+        get() = Pair(first, second).coords().toSet()
 
     init {
         checkStructure() || throw StructureError()
     }
 
-    private fun checkStructure(): Boolean {
-        if (first.x == second.x && first.y == second.y) return true
-        if (first.x == second.x && first.z == second.z) return true
-        if (first.z == second.z && first.y == second.y) return true
-        return false
+    private fun checkStructure() = when {
+        first.x == second.x && first.y == second.y -> true
+        first.x == second.x && first.z == second.z -> true
+        first.z == second.z && first.y == second.y -> true
+        else -> false
     }
 }
 
