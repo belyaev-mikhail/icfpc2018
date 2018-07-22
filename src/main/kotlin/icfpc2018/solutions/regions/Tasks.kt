@@ -2,6 +2,7 @@
 
 package icfpc2018.solutions.regions
 
+import icfpc2018.bot.algo.AStar
 import icfpc2018.bot.commands.Command
 import icfpc2018.bot.commands.Fill
 import icfpc2018.bot.commands.GFill
@@ -84,7 +85,7 @@ object RectangleTask {
 }
 
 object SectionTask {
-    operator fun invoke(section: Section, manager: BotManager): Task = buildSequence {
+    operator fun invoke(section: Section, manager: BotManager): Task = buildSequence<Map<Bot, Command>> {
         val nothing = emptyMap<Bot, Command>()
         val (bot1, bot2) = doWhileNotNull(nothing) { manager.reserve(2) }
         val diff = NearCoordDiff(0, -1, 0)
@@ -95,7 +96,7 @@ object SectionTask {
         val default1 = mapOf(bot1 to Wait)
         val default2 = mapOf(bot2 to Wait)
         goto1.zipWithDefault(default1, default2, goto2).asSequence()
-                .map { (c1, c2) -> mapOf(bot1 to c1, bot2 to c2) }
+                .map { (c1, c2) -> c1 + c2 }
                 .forEach { yield(it) }
         val diff1 = (first - section.second).toFarCoordDiff()
         val diff2 = (second - section.first).toFarCoordDiff()

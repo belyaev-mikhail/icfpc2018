@@ -23,7 +23,9 @@ data class State(
         val matrix: Model,
         val volatileModel: VolatileModel,
         val bots: PersistentTreeSet<Bot>
-)
+) {
+    fun canMoveTo(p: Point) = !matrix[p] && !volatileModel[p] && bots.none { it.position == p }
+}
 
 data class Point(val x: Int, val y: Int, val z: Int) {
     companion object {
