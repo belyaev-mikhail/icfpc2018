@@ -1,7 +1,9 @@
 package icfpc2018.solutions.regions
 
+import icfpc2018.bot.state.CoordDiff
 import icfpc2018.bot.state.Point
 import icfpc2018.bot.state.minus
+import icfpc2018.bot.state.plus
 
 sealed class Region {
     abstract val points: Set<Point>
@@ -28,26 +30,22 @@ enum class Direct {
 
 data class Section(val first: Point, val second: Point) : Region() {
     override val points: Set<Point>
-        get() = TODO()
-//            when (direct) {
-//            Direct.X -> (0 until (first - second).clen).map { }
-//            Direct.Y -> {
-//            }
-//            Direct.Z -> {
-//            }
-//        }
-
-    val direct: Direct
+        get(): Set<Point> {
+            val diff = first - second
+            val length = diff.clen
+            val atomDiff = CoordDiff(diff.dx / length, diff.dy / length, diff.dz / length)
+            return (0 until length).map { first + atomDiff }.toSet()
+        }
 
     init {
-        direct = checkStructure() ?: throw StructureError()
+        checkStructure() || throw StructureError()
     }
 
-    private fun checkStructure(): Direct? {
-        if (first.x == second.x && first.y == second.y) return Direct.Z
-        if (first.x == second.x && first.z == second.z) return Direct.Y
-        if (first.z == second.z && first.y == second.y) return Direct.X
-        return null
+    private fun checkStructure(): Boolean {
+        if (first.x == second.x && first.y == second.y) return true
+        if (first.x == second.x && first.z == second.z) return true
+        if (first.z == second.z && first.y == second.y) return true
+        return false
     }
 }
 
