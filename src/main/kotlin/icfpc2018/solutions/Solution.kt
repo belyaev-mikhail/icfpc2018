@@ -6,7 +6,7 @@ import icfpc2018.solutions.boundedSlices.BoundedSlices
 import icfpc2018.solutions.groundedBoundedSlices.GroundedBoundedSlices
 import icfpc2018.solutions.groundedSlices.GroundedSlices
 import icfpc2018.solutions.portfolio.Portfolio
-import icfpc2018.solutions.regions.Regions
+import icfpc2018.solutions.regions.RegionSolution
 import icfpc2018.solutions.sections.Sections
 import icfpc2018.solutions.slices.Slices
 import icfpc2018.solutions.tripleSlices.TripleSlices
@@ -22,7 +22,7 @@ fun getSolutionByName(name: String, target: Model, system: System) = when (name)
     "grounded_slices" -> GroundedSlices(target, system)
     "portfolio" -> Portfolio(target, system)
     "triple_slices" -> TripleSlices(target, system)
-    "regions" -> Regions(target, system)
+    "regions" -> RegionSolution(target, system)
     "grounded_bounded_slices" -> GroundedBoundedSlices(target, system)
     else -> throw IllegalArgumentException()
 }
