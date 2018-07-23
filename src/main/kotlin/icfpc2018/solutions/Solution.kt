@@ -23,7 +23,7 @@ fun getSolutionByName(name: String, target: Model, system: System) = when (name)
     "portfolio" -> Portfolio(target, system)
     "triple_slices" -> TripleSlices(target, system)
     "regions" -> RegionSolution(target, system, false)
-    "regions+deadlocks" -> RegionSolution(target, system, true)
+    "regions_deadlocks" -> RegionSolution(target, system, true)
     "grounded_bounded_slices" -> GroundedBoundedSlices(target, system)
     else -> throw IllegalArgumentException()
 }
