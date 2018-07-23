@@ -109,6 +109,12 @@ class RegionSolution(val target: Model, val system: System) : Solution {
                             strawSections.add(section)
                             begin = null
                         }
+                        if (isFill && begin != null && x - begin.x == 30) {
+                            val end = Point(x, y, z)
+                            val section = Section(begin, end)
+                            strawSections.add(section)
+                            begin = null
+                        }
                     }
                     if (begin != null) {
                         val end = Point(model.size - 1, y, z)
