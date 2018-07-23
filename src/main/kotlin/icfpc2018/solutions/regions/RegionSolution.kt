@@ -126,7 +126,7 @@ class RegionSolution(val target: Model, val system: System) : Solution {
                 }
 
 
-                val sortedSections = layer.mapNotNull { it as? Section }.toSortedSet(Comparator { lhv, rhv ->
+                val sortedSections = layer.mapNotNull { it as? Section }.sortedWith(Comparator { lhv, rhv ->
                     val lhvLen = lhv.length
                     val rhvLen = rhv.length
                     when {
@@ -150,6 +150,18 @@ class RegionSolution(val target: Model, val system: System) : Solution {
                             && section.second.z - lastSection.second.z == 1) {
                         currentLines.add(section)
                         lastSection = section
+                        if (currentLines.size == 30) {
+                            val newRegion = when {
+                                currentLines.isEmpty() -> throw IllegalStateException()
+                                currentLines.size == 1 -> currentLines.first()
+                                else -> Rectangle(currentLines.first().first, currentLines.first().second,
+                                        currentLines.last().second, currentLines.last().first)
+                            }
+                            withRectangles.add(newRegion)
+
+                            lastSection = null
+                            currentLines.clear()
+                        }
                     } else {
                         val newRegion = when {
                             currentLines.isEmpty() -> throw IllegalStateException()
@@ -173,7 +185,7 @@ class RegionSolution(val target: Model, val system: System) : Solution {
                     }
                     withRectangles.add(newRegion)
                 }
-                regions.add(withRectangles)
+                regions.add(layer)
             }
             return regions
         }
