@@ -10,6 +10,7 @@ import icfpc2018.solutions.BotManager
 import icfpc2018.solutions.TaggedTask
 import icfpc2018.solutions.Task
 import icfpc2018.solutions.botPairs
+import org.organicdesign.fp.collections.PersistentTreeSet
 import kotlin.coroutines.experimental.SequenceBuilder
 import kotlin.coroutines.experimental.buildSequence
 import kotlin.math.abs
@@ -133,6 +134,16 @@ object SectionTask {
         if (first != firstBot.position || second != secondBot.position)
             log.info("$bot1 $first $bot2 $second $diff $diff1 $diff2")
         yield(mapOf(bot1 to GFill(diff, diff1), bot2 to GFill(diff, diff2)))
+
+//        if(manager.system.currentState.canMoveTo(first + CoordDiff(0, 2, 0))
+//         && manager.system.currentState.canMoveTo(second + CoordDiff(0, 2, 0))) {
+//            val bail1 = GoTo(bot1, first + CoordDiff(0, 2, 0), manager)
+//            val bail2 = GoTo(bot2, second + CoordDiff(0, 2, 0), manager)
+//            bail1.zipWithDefault(default1, default2, bail2).asSequence()
+//                    .map { (c1, c2) -> c1 + c2 }
+//                    .forEach { yield(it) }
+//        }
+
         manager.release(listOf(bot1, bot2))
     }.iterator()
 }
@@ -211,6 +222,11 @@ object GoTo {
                 res.fold(trace.first()) { p, d -> p + d } == trace.last()
         ) { "Big diffs messed up =(" }
 
+        var cur = trace.first()
+        res.forEach {
+            cur += it
+        }
+
         val it = res.iterator()
         val commands = mutableListOf<Command>()
         while (it.hasNext()) {
@@ -235,14 +251,18 @@ object GoTo {
         val wait = mapOf(bid to Wait)
         val trace = doWhileNotNull(wait) { buildTrace(from, to, system) }
         var previousCommand: Command? = null
-        if (!system.lightReserve(trace))
+        val previousBotPositions: MutableList<Point> = mutableListOf()
+        if (!system.reserve(trace, exclude = setOf(from)))
             throw IllegalStateException("Cannot reserve")
         for (command in convertTrace(trace)) {
-            previousCommand?.let {
-                system.release((it as SimpleCommand).volatileCoords(system.currentState.bots.find { it.id == bid }!!))
-            }
+            previousBotPositions += manager.position(bid)
             yield(mapOf(bid to command))
-            previousCommand = command
+//            previousCommand?.let {
+//                val pos = previousBotPositions[previousBotPositions.lastIndex - 1]
+//                system.release((it as SimpleCommand).volatileCoords(Bot(id = bid, position = pos, seeds = PersistentTreeSet.empty())))
+//                system.reserve(setOf(previousBotPositions.last()))
+//            }
+//            previousCommand = command
         }
         system.release(trace)
     }

@@ -38,8 +38,8 @@ open class System(var currentState: State, var mode: Mode = Mode.DEBUG) {
         currentState = stateTrace.last()
     }
 
-    fun reserve(region: Iterable<Point>): Boolean {
-        if (region.any { !currentState.canMoveTo(it) }) return false
+    fun reserve(region: Iterable<Point>, exclude: Set<Point> = setOf()): Boolean {
+        if (region.any { it !in exclude && !currentState.canMoveTo(it) }) return false
         return lightReserve(region)
     }
 

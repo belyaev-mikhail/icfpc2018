@@ -111,12 +111,12 @@ class BotManager(val system: System) {
 
         if (commands.values.all { it == Wait }) {
             ++fullWaitCounter
+            if (fullWaitCounter == 5)
+                throw DeadLockError()
             return
         }
         else
             fullWaitCounter = 0
-        if (fullWaitCounter == 5)
-            throw DeadLockError()
 
         if (commands.isNotEmpty()) {
             val timeStamp = system.timeStamp()
