@@ -77,21 +77,26 @@ class BotManager(val system: System) {
         if (fullWaitCounter == 3)
             throw DeadLockError()
 
-        if (commands.isNotEmpty() /*&& commands.values.any { it is GFill || it is Fill } */) {
+        if (commands.isNotEmpty()) {
             val timeStamp = system.timeStamp()
             try {
-                if (system.currentState.harmonics == Harmonics.HIGH && system.currentState.matrix.isEverybodyGrounded) {
-                    system.timeStep(commands.map { if (it.key == commands.keys.first()) Flip else Wait })
-                }
+                if (system.currentState.matrix.isEverybodyGrounded)
+                    flipTo(Harmonics.LOW)
                 system.timeStep(commands.values.toList())
             } catch (ex: GroundError) {
                 system.rollBackTo(timeStamp)
-                if (system.currentState.harmonics == Harmonics.LOW) {
-                    system.timeStep(commands.map { if (it.key == commands.keys.first()) Flip else Wait })
-                }
+                flipTo(Harmonics.HIGH)
                 system.timeStep(commands.values.toList())
             }
+            if (system.currentState.matrix.isEverybodyGrounded)
+                flipTo(Harmonics.LOW)
         }
+    }
+
+    private fun flipTo(harmonics: Harmonics) {
+        if (system.currentState.harmonics == harmonics) return
+        val commands = system.currentState.bots.map { if (it.id == 1) Flip else Wait }.toList()
+        system.timeStep(commands)
     }
 
     fun apply() {
