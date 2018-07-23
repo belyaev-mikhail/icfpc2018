@@ -10,6 +10,7 @@ import icfpc2018.solutions.BotManager
 import icfpc2018.solutions.TaggedTask
 import icfpc2018.solutions.Task
 import icfpc2018.solutions.botPairs
+import org.organicdesign.fp.collections.PersistentTreeSet
 import kotlin.coroutines.experimental.SequenceBuilder
 import kotlin.coroutines.experimental.buildSequence
 import kotlin.math.abs
@@ -45,6 +46,16 @@ fun <T, C> Iterator<T>.zipWithDefault(default1: T, default2: C, other: Iterator<
     }
 }.iterator()
 
+fun <T> List<Iterator<T>>.zipWithDefaults(defaults: List<T>) = buildSequence {
+    while(any { it.hasNext() }) {
+        yield(
+                zip(defaults) { it, def ->
+                    if(it.hasNext()) it.next()
+                    else def
+                }
+        )
+    }
+}
 
 fun <T> Iterator<T>.zipWithDefault(default: T, defaults: List<T>, other: List<Iterator<T>>): Iterator<List<T>> = buildSequence {
     while (hasNext() && other.all { it.hasNext() }) {
@@ -97,10 +108,11 @@ object RectangleTask {
 object SectionTask {
     operator fun invoke(section: Section, manager: BotManager): Task = TaggedTask("$section") {
         val nothing = emptyMap<Int, Command>()
-        val (bot1, bot2) = doWhileNotNull(nothing) { manager.reserve(2) }
         val diff = NearCoordDiff(0, -1, 0)
         val first = section.first + -diff // best code
         val second = section.second + -diff // best code
+        val (bot1, bot2) = doWhileNotNull(nothing) { manager.reserve(listOf(first, second)) }
+
         val goto1 = GoTo(bot1, first, manager)
         val goto2 = GoTo(bot2, second, manager)
         val default1 = mapOf(bot1 to Wait)
@@ -122,6 +134,16 @@ object SectionTask {
         if (first != firstBot.position || second != secondBot.position)
             log.info("$bot1 $first $bot2 $second $diff $diff1 $diff2")
         yield(mapOf(bot1 to GFill(diff, diff1), bot2 to GFill(diff, diff2)))
+
+//        if(manager.system.currentState.canMoveTo(first + CoordDiff(0, 2, 0))
+//         && manager.system.currentState.canMoveTo(second + CoordDiff(0, 2, 0))) {
+//            val bail1 = GoTo(bot1, first + CoordDiff(0, 2, 0), manager)
+//            val bail2 = GoTo(bot2, second + CoordDiff(0, 2, 0), manager)
+//            bail1.zipWithDefault(default1, default2, bail2).asSequence()
+//                    .map { (c1, c2) -> c1 + c2 }
+//                    .forEach { yield(it) }
+//        }
+
         manager.release(listOf(bot1, bot2))
     }.iterator()
 }
@@ -154,11 +176,12 @@ fun <T> List<T>.sepWhile(limit: Int = size, predicate: (T) -> Boolean): Pair<Lis
 
 object GoTo {
     fun buildTrace(from: Point, to: Point, system: System): List<Point>? {
+        if(!system.currentState.canMoveTo(to)) return null
         val algo = AStar<Point>(
                 neighbours = { it.immediateNeighbours().filter { system.currentState.canMoveTo(it) } },
                 heuristic = {
                     val diff = it - to
-                    minOf(abs(diff.dx), abs(diff.dy), abs(diff.dz))
+                    maxOf(abs(diff.dz), abs(diff.dy) / 2, abs(diff.dx) / 2)
                 },
                 goal = { it == to }
         )
@@ -199,6 +222,11 @@ object GoTo {
                 res.fold(trace.first()) { p, d -> p + d } == trace.last()
         ) { "Big diffs messed up =(" }
 
+        var cur = trace.first()
+        res.forEach {
+            cur += it
+        }
+
         val it = res.iterator()
         val commands = mutableListOf<Command>()
         while (it.hasNext()) {
@@ -222,10 +250,19 @@ object GoTo {
         val system = manager.system
         val wait = mapOf(bid to Wait)
         val trace = doWhileNotNull(wait) { buildTrace(from, to, system) }
-        if (!system.lightReserve(trace))
+        var previousCommand: Command? = null
+        val previousBotPositions: MutableList<Point> = mutableListOf()
+        if (!system.reserve(trace, exclude = setOf(from)))
             throw IllegalStateException("Cannot reserve")
         for (command in convertTrace(trace)) {
+            previousBotPositions += manager.position(bid)
             yield(mapOf(bid to command))
+//            previousCommand?.let {
+//                val pos = previousBotPositions[previousBotPositions.lastIndex - 1]
+//                system.release((it as SimpleCommand).volatileCoords(Bot(id = bid, position = pos, seeds = PersistentTreeSet.empty())))
+//                system.reserve(setOf(previousBotPositions.last()))
+//            }
+//            previousCommand = command
         }
         system.release(trace)
     }
@@ -238,13 +275,16 @@ object GoToBase {
     operator fun invoke(manager: BotManager): Task = TaggedTask("GotoBase()") {
         val numBots = manager.system.numBots
         val points = Pair(Point.ZERO, Point(numBots, 0, 0)).coords()
-        val bots = manager.reserve(numBots) ?: throw IllegalStateException("WTF")
+        val bots = manager.reserve(numBots)?.sorted() ?: throw IllegalStateException("WTF")
         val goto: List<Task> = bots.zip(points).map { (bot, p) -> GoTo(bot, p, manager) }
-        val default = mapOf(bots.first() to Wait)
-        val defaults = bots.drop(1).map { mapOf(it to Wait) }
-        val subs = goto.first().zipWithDefault(default, defaults, goto.drop(1)).asSequence()
-                .map { it.fold(emptyMap<Int, Command>()) { acc, m -> acc + m } }
+        val defaults = bots.map { mapOf(it to Wait) }
+        val subs = goto.zipWithDefaults(defaults).map {
+            it.fold(emptyMap<Int, Command>()){ a, b -> a + b }
+        }
         yieldAll(subs)
+        bots.forEach {
+            log.info("Bot#$it in position ${manager.position(it)}")
+        }
         manager.release(bots)
     }.iterator()
 }

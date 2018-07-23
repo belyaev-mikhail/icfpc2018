@@ -113,6 +113,7 @@ fun assemble(solutionName: String, targetModels: List<String>, resultsDir: Strin
             solution.solve()
         } catch (e: Exception) {
             log.error("Solution $solution throwed exception $e")
+            e.printStackTrace()
             val ofile = FileOutputStream(File("lastFailure.nbt"))
             system.commandTrace.forEach { it.write(ofile) }
             continue
@@ -167,6 +168,7 @@ fun disassemble(solutionName: String, targetModels: List<String>, resultsDir: St
             solution.solve()
         } catch (e: Exception) {
             log.error("Solution $solution throwed exception $e")
+            e.printStackTrace()
             continue
         }
 
@@ -218,6 +220,7 @@ fun reassemble(solutionName: String, targetModels: List<String>, resultsDir: Str
             ssolution.solve()
         } catch (e: Exception) {
             log.error("Solution $ssolution throwed exception $e")
+            e.printStackTrace()
             continue
         }
 
@@ -249,6 +252,7 @@ fun reassemble(solutionName: String, targetModels: List<String>, resultsDir: Str
             tsolution.solve()
         } catch (e: Exception) {
             log.error("Solution $tsolution throwed exception $e")
+            e.printStackTrace()
             continue
         }
 
