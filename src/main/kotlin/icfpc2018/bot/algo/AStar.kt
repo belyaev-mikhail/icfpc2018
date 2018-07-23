@@ -44,7 +44,6 @@ class AStar<T>(
             val current = open.remove()
 
             if(goal(current.value)) {
-                log.info("$current")
                 return current
             }
 
@@ -62,7 +61,6 @@ class AStar<T>(
                 roots[neighbour] = hist
             }
         }
-        log.info("Fuck dis shit, astar goin' home")
         return null
     }
 

@@ -185,7 +185,7 @@ class RegionSolution(val target: Model, val system: System) : Solution {
                     }
                     withRectangles.add(newRegion)
                 }
-                regions.add(layer)
+                regions.add(withRectangles)
             }
             return regions
         }
