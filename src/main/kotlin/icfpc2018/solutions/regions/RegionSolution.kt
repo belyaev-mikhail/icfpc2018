@@ -124,7 +124,56 @@ class RegionSolution(val target: Model, val system: System) : Solution {
                     val converted = strawSections.map { it.toVoxelIfCan() }
                     layer.addAll(converted)
                 }
-                regions.add(layer)
+
+
+                val sortedSections = layer.mapNotNull { it as? Section }.toSortedSet(Comparator { lhv, rhv ->
+                    val lhvLen = lhv.length
+                    val rhvLen = rhv.length
+                    when {
+                        lhvLen < rhvLen -> -1
+                        lhvLen == rhvLen -> lhv.first.z.compareTo(rhv.first.z)
+                        else -> 1
+                    }
+                })
+                val withRectangles = layer.filterNot { it is Section }.toMutableList()
+                var lastSection: Section? = null
+                val currentLines = ArrayList<Section>()
+                for (section in sortedSections) {
+                    if (lastSection == null) {
+                        currentLines.add(section)
+                        lastSection = section
+                        continue
+                    }
+
+                    if (lastSection.first.x == section.first.x
+                            && lastSection.second.x == section.second.x
+                            && section.second.z - lastSection.second.z == 1) {
+                        currentLines.add(section)
+                        lastSection = section
+                    } else {
+                        val newRegion = when {
+                            currentLines.isEmpty() -> throw IllegalStateException()
+                            currentLines.size == 1 -> currentLines.first()
+                            else -> Rectangle(currentLines.first().first, currentLines.first().second,
+                                    currentLines.last().second, currentLines.last().first)
+                        }
+                        withRectangles.add(newRegion)
+
+                        lastSection = section
+                        currentLines.clear()
+                        currentLines.add(lastSection)
+                    }
+                }
+                if (currentLines.isNotEmpty()) {
+                    val newRegion = when {
+                        currentLines.isEmpty() -> throw IllegalStateException()
+                        currentLines.size == 1 -> currentLines.first()
+                        else -> Rectangle(currentLines.first().first, currentLines.first().second,
+                                currentLines.last().second, currentLines.last().first)
+                    }
+                    withRectangles.add(newRegion)
+                }
+                regions.add(withRectangles)
             }
             return regions
         }
