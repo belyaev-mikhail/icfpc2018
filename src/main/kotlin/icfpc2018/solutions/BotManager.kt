@@ -1,10 +1,7 @@
 package icfpc2018.solutions
 
 import icfpc2018.bot.commands.*
-import icfpc2018.bot.state.Bot
-import icfpc2018.bot.state.GroundError
-import icfpc2018.bot.state.Harmonics
-import icfpc2018.bot.state.System
+import icfpc2018.bot.state.*
 import java.util.*
 import kotlin.coroutines.experimental.SequenceBuilder
 import kotlin.coroutines.experimental.buildIterator
@@ -23,7 +20,7 @@ class CollisionError : Exception()
 class DeadLockError : Exception()
 
 class BotManager(val system: System) {
-    private val botPool = ArrayList<Bot>(system.currentState.bots)
+    private val botPool = ArrayList<Int>(system.currentState.bots.map { it.id }.toList())
 
     private val taskPool = ArrayList<Task>()
 
@@ -31,14 +28,19 @@ class BotManager(val system: System) {
 
     fun add(task: Task) = taskPool.add(task)
 
-    fun reserve(numBots: Int): List<Bot>? {
+    fun positions(bids: Set<Int>): Map<Int, Point> = system.currentState.bots
+            .filter { it.id in bids }
+            .map { it.id to it.position }
+            .toMap()
+
+    fun reserve(numBots: Int): List<Int>? {
         if (botPool.size < numBots) return null
         val bots = botPool.takeLast(numBots)
         botPool.subList(botPool.size - numBots, botPool.size).clear()
         return bots
     }
 
-    fun release(bots: List<Bot>) {
+    fun release(bots: List<Int>) {
         botPool.addAll(bots)
     }
 
@@ -52,7 +54,7 @@ class BotManager(val system: System) {
             }
             val taskCommands = task.next()
             for (bot in botPool) {
-                if (bot.id in taskCommands)
+                if (bot in taskCommands)
                     throw CollisionError()
             }
             if (taskCommands.keys.any { it in commands })
@@ -63,11 +65,11 @@ class BotManager(val system: System) {
             taskPool.remove(task)
         }
         for (bot in botPool) {
-            if (bot.id in commands)
+            if (bot in commands)
                 throw CollisionError()
 //            ToDo(Mikhail) wtf??
 //            if(botPool.size != system.numBots) commands[bot] = Wait
-            commands[bot.id] = Wait
+            commands[bot] = Wait
         }
 
         if (commands.values.all { it === Wait })

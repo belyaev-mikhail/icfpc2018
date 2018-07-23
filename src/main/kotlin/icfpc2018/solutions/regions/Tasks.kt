@@ -5,6 +5,7 @@ package icfpc2018.solutions.regions
 import icfpc2018.bot.algo.AStar
 import icfpc2018.bot.commands.*
 import icfpc2018.bot.state.*
+import icfpc2018.log
 import icfpc2018.solutions.BotManager
 import icfpc2018.solutions.TaggedTask
 import icfpc2018.solutions.Task
@@ -73,9 +74,10 @@ object RectangleTask {
         val p3 = rectangle.p3 + -diff // best code
         val p4 = rectangle.p4 + -diff // best code
         val points = listOf(p1, p2, p3, p4)
-        val goto: List<Task> = bots.zip(points).map { (bot, p) -> GoTo(bot.id, bot.position, p, manager) }
-        val default = mapOf(bots.first().id to Wait)
-        val defaults = bots.drop(1).map { mapOf(it.id to Wait) }
+        val positions = manager.positions(bots.toSet())
+        val goto: List<Task> = bots.zip(points).map { (bot, p) -> GoTo(bot, positions[bot]!!, p, manager) }
+        val default = mapOf(bots.first() to Wait)
+        val defaults = bots.drop(1).map { mapOf(it to Wait) }
         goto.first().zipWithDefault(default, defaults, goto.drop(1)).asSequence()
                 .map { it.fold(emptyMap<Int, Command>()) { acc, m -> acc + m } }
                 .forEach { yield(it) }
@@ -85,9 +87,9 @@ object RectangleTask {
         val diff4 = (rectangle.p2 - rectangle.p4).toFarCoordDiff()
         val diffs = listOf(diff1, diff2, diff3, diff4)
         while (!manager.system.reserve(rectangle.points)) {
-            yield(bots.map { it.id to Wait }.toMap())
+            yield(bots.map { it to Wait }.toMap())
         }
-        val commands = bots.zip(diffs).map { (bot, d) -> bot.id to GFill(diff, d) }.toMap()
+        val commands = bots.zip(diffs).map { (bot, d) -> bot to GFill(diff, d) }.toMap()
         yield(commands)
         manager.release(bots)
     }
@@ -100,21 +102,28 @@ object SectionTask {
         val diff = NearCoordDiff(0, -1, 0)
         val first = section.first + -diff // best code
         val second = section.second + -diff // best code
-        val goto1 = GoTo(bot1.id, bot1.position, first, manager)
-        val goto2 = GoTo(bot2.id, bot2.position, second, manager)
-        val default1 = mapOf(bot1.id to Wait)
-        val default2 = mapOf(bot2.id to Wait)
+        val positions = manager.positions(setOf(bot1, bot2))
+        val goto1 = GoTo(bot1, positions[bot1]!!, first, manager)
+        val goto2 = GoTo(bot2, positions[bot2]!!, second, manager)
+        val default1 = mapOf(bot1 to Wait)
+        val default2 = mapOf(bot2 to Wait)
         goto1.zipWithDefault(default1, default2, goto2).asSequence()
                 .map { (c1, c2) -> c1 + c2 }
                 .forEach { yield(it) }
         val diff1 = (section.second - section.first).toFarCoordDiff()
         val diff2 = (section.first - section.second).toFarCoordDiff()
         while (!manager.system.reserve(section.points)) {
-            yield(mapOf(bot1.id to Wait, bot2.id to Wait))
+            yield(mapOf(bot1 to Wait, bot2 to Wait))
         }
-        manager.system.currentState.bots.filter { it.id in setOf(bot1.id, bot2.id) }.forEach { println(it) }
-        println("${bot1.id} $first ${bot2.id} $second $diff $diff1 $diff2")
-        yield(mapOf(bot1.id to GFill(diff, diff1), bot2.id to GFill(diff, diff2)))
+        val firstBot = manager.system.currentState.bots.find { it.id == bot1 }!!
+        val secondBot = manager.system.currentState.bots.find { it.id == bot2 }!!
+        if (first != firstBot.position)
+            log.info("Expected $first, but got ${firstBot.position}")
+        if (second != secondBot.position)
+            log.info("Expected $second, but got ${secondBot.position}")
+        if (first != firstBot.position || second != secondBot.position)
+            log.info("$bot1 $first $bot2 $second $diff $diff1 $diff2")
+        yield(mapOf(bot1 to GFill(diff, diff1), bot2 to GFill(diff, diff2)))
         manager.release(listOf(bot1, bot2))
     }.iterator()
 }
@@ -124,10 +133,11 @@ object VoxelTask {
         val nothing = emptyMap<Int, Command>()
         val (bot) = doWhileNotNull(nothing) { manager.reserve(1) }
         val diff = NearCoordDiff(0, -1, 0)
-        val goto = GoTo(bot.id, bot.position, voxel.point + -diff, manager)
+        val positions = manager.positions(setOf(bot))
+        val goto = GoTo(bot, positions[bot]!!, voxel.point + -diff, manager)
         goto.forEach { yield(it) }
-        while (!manager.system.reserve(voxel.points)) yield(mapOf(bot.id to Wait))
-        yield(mapOf(bot.id to Fill(diff)))
+        while (!manager.system.reserve(voxel.points)) yield(mapOf(bot to Wait))
+        yield(mapOf(bot to Fill(diff)))
         manager.release(listOf(bot))
     }.iterator()
 }
@@ -231,9 +241,10 @@ object GoToBase {
         val numBots = manager.system.numBots
         val points = Pair(Point.ZERO, Point(numBots, 0, 0)).coords()
         val bots = manager.reserve(numBots) ?: throw IllegalStateException("WTF")
-        val goto: List<Task> = bots.zip(points).map { (bot, p) -> GoTo(bot.id, bot.position, p, manager) }
-        val default = mapOf(bots.first().id to Wait)
-        val defaults = bots.drop(1).map { mapOf(it.id to Wait) }
+        val positions = manager.positions(bots.toSet())
+        val goto: List<Task> = bots.zip(points).map { (bot, p) -> GoTo(bot, positions[bot]!!, p, manager) }
+        val default = mapOf(bots.first() to Wait)
+        val defaults = bots.drop(1).map { mapOf(it to Wait) }
         val subs = goto.first().zipWithDefault(default, defaults, goto.drop(1)).asSequence()
                 .map { it.fold(emptyMap<Int, Command>()) { acc, m -> acc + m } }
         yieldAll(subs)
