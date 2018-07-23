@@ -128,6 +128,7 @@ fun assemble(solutionName: String, targetModels: List<String>, resultsDir: Strin
         if (true) {
             val resultTraceFile = "$resultsDir/${targetModelName}_$solutionName.nbt"
             results.addNewResult(targetModelName, solutionName, system.currentState.energy, resultTraceFile)
+            results.writeToDirectory(resultsDir)
 
             val ofile = FileOutputStream(File(resultTraceFile))
             system.commandTrace.forEach { it.write(ofile) }
@@ -184,6 +185,7 @@ fun disassemble(solutionName: String, targetModels: List<String>, resultsDir: St
         if (success) {
             val resultTraceFile = "$resultsDir/${targetModelName}_$solutionName.nbt"
             results.addNewResult(targetModelName, solutionName, assembleSystem.currentState.energy, resultTraceFile)
+            results.writeToDirectory(resultsDir)
 
             val ofile = FileOutputStream(File(resultTraceFile))
             resultingTrace.forEach { it.write(ofile) }
@@ -267,6 +269,7 @@ fun reassemble(solutionName: String, targetModels: List<String>, resultsDir: Str
         if (success) {
             val resultTraceFile = "$resultsDir/${targetModelName}_$solutionName.nbt"
             results.addNewResult(targetModelName, solutionName, sassembleSystem.currentState.energy + tassembleSystem.currentState.energy, resultTraceFile)
+            results.writeToDirectory(resultsDir)
 
             val ofile = FileOutputStream(File(resultTraceFile))
             disassembleTrace.dropLast(1).forEach { it.write(ofile) }
@@ -338,6 +341,7 @@ fun doAll(arguments: Arguments) {
                 val resultTraceFile = "$resultsDir/${atargetModelName}_$solutionName.nbt"
                 log.info("Dumping assemble results to $resultTraceFile")
                 results.addNewResult(atargetModelName, solutionName, assembleSystem.currentState.energy, resultTraceFile)
+                results.writeToDirectory(resultsDir)
 
                 val ofile = FileOutputStream(File(resultTraceFile))
                 assembleSystem.commandTrace.forEach { it.write(ofile) }
@@ -348,6 +352,7 @@ fun doAll(arguments: Arguments) {
                 val resultTraceFile = "$resultsDir/${dtargetModelName}_$solutionName.nbt"
                 log.info("Dumping disassemble results to $resultTraceFile")
                 results.addNewResult(atargetModelName, solutionName, assembleSystem.currentState.energy, resultTraceFile)
+                results.writeToDirectory(resultsDir)
 
                 val ofile = FileOutputStream(File(resultTraceFile))
                 resultingTrace.forEach { it.write(ofile) }
