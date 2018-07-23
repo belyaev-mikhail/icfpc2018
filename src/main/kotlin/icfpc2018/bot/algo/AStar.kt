@@ -1,5 +1,6 @@
 package icfpc2018.bot.algo
 
+import icfpc2018.log
 import java.util.*
 
 class AStar<T>(
@@ -23,7 +24,12 @@ class AStar<T>(
             return mut.reversed()
         }
 
+        override fun toString(): String {
+            return "History(value=$value, len=$len)"
+        }
+
         val score by lazy { len + heuristic(value) }
+
     }
 
     val closed: MutableSet<History> = mutableSetOf()
@@ -31,11 +37,16 @@ class AStar<T>(
     val roots: MutableMap<T, History> = mutableMapOf()
 
     fun run(start: T): History? {
+        if(goal(start)) return History(start)
+
         open += History(start)
         while(open.isNotEmpty()) {
             val current = open.remove()
 
-            if(goal(current.value)) return current
+            if(goal(current.value)) {
+                log.info("$current")
+                return current
+            }
 
             closed += current
 
@@ -44,14 +55,14 @@ class AStar<T>(
                 val hist = current.next(neighbour)
                 if(hist in closed) continue
 
-                if(hist !in open) {
-                    open += hist
-                }
-                else if(hist.score >= roots[neighbour]!!.score) continue
+                val oldScore = roots[neighbour]?.score ?: Int.MAX_VALUE
+                if(hist.score >= oldScore) continue
 
+                open += hist
                 roots[neighbour] = hist
             }
         }
+        log.info("Fuck dis shit, astar goin' home")
         return null
     }
 
