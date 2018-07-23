@@ -135,9 +135,9 @@ open class LinearCoordDiff(dx: Int, dy: Int, dz: Int) : CoordDiff(dx, dy, dz) {
     fun affectedCoords(origin: Point): Set<Point> {
         with(origin) {
             return when (axis) {
-                X -> (0..dx).map { Point(x + it, y, z) }.toSet()
-                Y -> (0..dy).map { Point(x, y + it, z) }.toSet()
-                Z -> (0..dz).map { Point(x, y, z + it) }.toSet()
+                X -> (min(0, dx)..max(0, dx)).map { Point(x + it, y, z) }.toSet()
+                Y -> (min(0, dy)..max(0, dy)).map { Point(x, y + it, z) }.toSet()
+                Z -> (min(0, dz)..max(0, dz)).map { Point(x, y, z + it) }.toSet()
             }
         }
     }
