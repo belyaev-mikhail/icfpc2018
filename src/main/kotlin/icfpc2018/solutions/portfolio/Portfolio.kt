@@ -14,7 +14,7 @@ class Portfolio(val target: Model, val system: System) : Solution {
     val initialState = State(0, Harmonics.LOW, model, VolatileModel(), persistentTreeSetOf(bot))
 
     companion object {
-        val solutionNames = listOf("grounded_slices", "bounded_slices", "grounded_bounded_slices")
+        val solutionNames = listOf("grounded_slices", "grounded_bounded_slices", "region_solution")
     }
 
     override fun solve() {
