@@ -7,7 +7,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 enum class RunMode {
-    ASSEMBLE, DISASSEMBLE, REASSEMBLE, SUBMIT
+    ASSEMBLE, DISASSEMBLE, REASSEMBLE, SUBMIT, ALL
 }
 
 class Arguments(args: Array<String>) {
@@ -83,6 +83,7 @@ class Arguments(args: Array<String>) {
 
     fun getMode() = when (getValue("mode")) {
         null -> throw IllegalArgumentException()
+        "all" -> RunMode.ALL
         "a" -> RunMode.ASSEMBLE
         "d" -> RunMode.DISASSEMBLE
         "r" -> RunMode.REASSEMBLE
@@ -97,11 +98,10 @@ class Arguments(args: Array<String>) {
 
     fun isReversed() = cmd.hasOption("reversed")
 
-    fun getModelNums(): List<Int> {
+    fun getModelNums(mode: RunMode): List<Int> {
         val model = getValue("model")?.toInt()
         if (model != null) return listOf(model)
 
-        val mode = getMode()
         val from = getValue("from")?.toInt() ?: bounds.getValue(mode).first
         val to = getValue("to")?.toInt() ?: bounds.getValue(mode).second
 
@@ -111,10 +111,9 @@ class Arguments(args: Array<String>) {
         }
     }
 
-    fun getModels(): List<String> {
-        val mode = getMode()
+    fun getModels(mode: RunMode = getMode()): List<String> {
         val format = modelNames.getValue(mode)
-        return getModelNums().map { format.format(it) }
+        return getModelNums(mode).map { format.format(it) }
     }
 
     fun getValue(name: String): String? = cmd.getOptionValue(name)

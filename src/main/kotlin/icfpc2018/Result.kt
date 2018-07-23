@@ -20,10 +20,14 @@ class Results(val elements: MutableMap<String, Result>) : MutableMap<String, Res
 
     companion object {
         fun fromJson(json: Reader): Results {
-            val jsonObject = klaxon.parseJsonObject(json)
-            @Suppress("UNCHECKED_CAST")
-            val jsonMap = jsonObject.map as Map<String, JsonObject>
-            val elements = jsonMap.map { it.key to Result.fromJson(it.value) }.toMap()
+            val elements = try {
+                val jsonObject = klaxon.parseJsonObject(json)
+                @Suppress("UNCHECKED_CAST")
+                val jsonMap = jsonObject.map as Map<String, JsonObject>
+                jsonMap.map { it.key to Result.fromJson(it.value) }.toMap()
+            } catch (e: Exception) {
+                mutableMapOf<String, Result>()
+            }
             return Results(elements.toMutableMap())
         }
 

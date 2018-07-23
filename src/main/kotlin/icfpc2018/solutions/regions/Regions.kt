@@ -32,6 +32,14 @@ data class Section(val first: Point, val second: Point) : Region() {
         checkStructure() || throw StructureError()
     }
 
+    val length: Int
+        get() = when {
+            first.x == second.x && first.y == second.y -> second.z - first.z
+            first.x == second.x && first.z == second.z -> second.y - first.y
+            first.z == second.z && first.y == second.y -> second.x - first.x
+            else -> throw IllegalStateException()
+        }
+
     private fun checkStructure() = when {
         first.x == second.x && first.y == second.y -> true
         first.x == second.x && first.z == second.z -> true

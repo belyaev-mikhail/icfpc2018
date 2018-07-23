@@ -78,13 +78,13 @@ fun <T> Iterator<T>.zipWithDefault(default: T, defaults: List<T>, other: List<It
 object RectangleTask {
     operator fun invoke(rectangle: Rectangle, manager: BotManager): Task = TaggedTask("$rectangle") {
         val nothing = emptyMap<Int, Command>()
-        val bots = doWhileNotNull(nothing) { manager.reserve(4) }
         val diff = NearCoordDiff(0, -1, 0)
         val p1 = rectangle.p1 + -diff // best code
         val p2 = rectangle.p2 + -diff // best code
         val p3 = rectangle.p3 + -diff // best code
         val p4 = rectangle.p4 + -diff // best code
         val points = listOf(p1, p2, p3, p4)
+        val bots = doWhileNotNull(nothing) { manager.reserve(points) }
         val goto: List<Task> = bots.zip(points).map { (bot, p) -> GoTo(bot, p, manager) }
         val default = mapOf(bots.first() to Wait)
         val defaults = bots.drop(1).map { mapOf(it to Wait) }
@@ -293,9 +293,6 @@ object GoToBase {
             it.fold(emptyMap<Int, Command>()){ a, b -> a + b }
         }
         yieldAll(subs)
-        bots.forEach {
-            log.info("Bot#$it in position ${manager.position(it)}")
-        }
         manager.release(bots)
     }.iterator()
 }
