@@ -2,14 +2,16 @@ package icfpc2018.solutions.regions
 
 import icfpc2018.bot.state.Model
 import icfpc2018.bot.state.Point
+//import org.eclipse.elk.alg.layered.compaction.recthull.Point as RealPoint
 import org.eclipse.elk.alg.common.Point as RealPoint
 import icfpc2018.bot.state.System
 import javax.script.ScriptEngineManager
 import javax.script.Invocable
 import java.io.FileReader
 import jdk.nashorn.api.scripting.NashornScriptEngine
-import java.io.File
+//import org.eclipse.elk.alg.layered.compaction.recthull.RectilinearConvexHull
 import org.eclipse.elk.alg.common.RectilinearConvexHull
+
 import org.eclipse.elk.core.math.ElkRectangle
 import kotlin.collections.ArrayList
 import java.util.LinkedList
@@ -29,7 +31,8 @@ class RegionSplitter(val target: Model, val system: System) {
                         if (model[x, y, z]) {
                             layerPoints.add(x to z)
                         }
-                val groupedPoints = groupSetOfPoints(layerPoints)
+
+                val groupedPoints = groupSetOfPoints(layerPoints).map { scaleCoordinates(it) }
                 val pointPolygons = groupedPoints.map { RectilinearConvexHull.of(it) }
                 val pointRectangles = pointPolygons.map { it.splitIntoRectangles() }
                 val pointWithHolesPolygons = pointRectangles.map { it to holesInPolygon(it, model, y) }
@@ -43,7 +46,7 @@ class RegionSplitter(val target: Model, val system: System) {
                 val rectanglesWithHoles = polyWithHolesPoints.map { splitOnRectangles(it) }
                 val completed = completeRectangles.flatten()
                         .map { getPointsFromRectangle(it) } + rectanglesWithHoles.flatten()
-                val regions = completed.map { buildRegions(it, y) }
+                val regions = completed.run { unscaleRectangles(this) }.map { buildRegions(it, y) }
                 layerRectangles.add(regions)
             }
             return layerRectangles
@@ -88,19 +91,21 @@ class RegionSplitter(val target: Model, val system: System) {
 
         fun holesInPolygon(rectangles: List<ElkRectangle>, model: Model, y: Int): List<RectilinearConvexHull> {
             val polygonHoles = HashSet<Pair<Int, Int>>()
-            for (rect in rectangles) {
-                val (xFrom, zFrom, xTo, zTo) = getPointsFromRectangle(rect)
+            val unscaledRectangles = rectangles.map { getPointsFromRectangle(it) }.run { unscaleRectangles(this) }
+            for (rect in unscaledRectangles) {
+                val (xFrom, zFrom, xTo, zTo) = rect
                 for (x in xFrom..xTo)
                     for (z in zFrom..zTo)
                         if (!model[x, y, z])
                             polygonHoles.add(x to z)
 
             }
-            val groupedHoles = groupSetOfPoints(polygonHoles)
+            val groupedHoles = groupSetOfPoints(polygonHoles).map { scaleCoordinates(it) }
             return groupedHoles.map { RectilinearConvexHull.of(it) }
         }
 
         fun groupSetOfPoints(points: Set<Pair<Int, Int>>): List<List<RealPoint>> {
+
             val pointGroups = ArrayList<List<RealPoint>>()
             var ungroupedPoints: Set<Pair<Int, Int>> = points
             while (ungroupedPoints.isNotEmpty()) {
@@ -132,6 +137,20 @@ class RegionSplitter(val target: Model, val system: System) {
             return visitedPoints
 
         }
+
+
+        fun scaleCoordinates(points: List<RealPoint>) =
+                points.map { it.x * 2 to it.y * 2 }
+                        .map { (x, y) ->
+                            listOf(
+                                    RealPoint(x, y),
+                                    RealPoint(x + 1, y),
+                                    RealPoint(x + 1, y + 1),
+                                    RealPoint(x, y + 1)
+                            )
+                        }.flatten()
+
+        fun unscaleRectangles(rectangles: List<List<Int>>) = rectangles.map { points -> points.map { it / 2 } }
 
         val rectangleSplitter by lazy {
             val engine = ScriptEngineManager().getEngineByName("nashorn") as NashornScriptEngine
