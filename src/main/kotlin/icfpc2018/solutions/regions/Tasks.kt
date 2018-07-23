@@ -6,10 +6,12 @@ import icfpc2018.bot.algo.AStar
 import icfpc2018.bot.commands.*
 import icfpc2018.bot.state.*
 import icfpc2018.solutions.BotManager
+import icfpc2018.solutions.TaggedTask
 import icfpc2018.solutions.Task
 import icfpc2018.solutions.botPairs
 import kotlin.coroutines.experimental.SequenceBuilder
 import kotlin.coroutines.experimental.buildSequence
+import kotlin.math.abs
 
 suspend fun <T, C> SequenceBuilder<C>.doWhileNotNull(default: C, foo: () -> T?): T {
     var result = foo()
@@ -62,12 +64,9 @@ fun <T> Iterator<T>.zipWithDefault(default: T, defaults: List<T>, other: List<It
 }.iterator()
 
 object RectangleTask {
-    operator fun invoke(rectangle: Rectangle, manager: BotManager): Task = buildSequence {
+    operator fun invoke(rectangle: Rectangle, manager: BotManager): Task = TaggedTask("$rectangle") {
         val nothing = emptyMap<Bot, Command>()
         val bots = doWhileNotNull(nothing) { manager.reserve(4) }
-        while (!manager.system.reserve(rectangle.points)) {
-            yield(bots.map { it to Wait }.toMap())
-        }
         val diff = NearCoordDiff(0, -1, 0)
         val p1 = rectangle.p1 + -diff // best code
         val p2 = rectangle.p2 + -diff // best code
@@ -85,19 +84,19 @@ object RectangleTask {
         val diff3 = (rectangle.p1 - rectangle.p3).toFarCoordDiff()
         val diff4 = (rectangle.p2 - rectangle.p4).toFarCoordDiff()
         val diffs = listOf(diff1, diff2, diff3, diff4)
+        while(!manager.system.reserve(rectangle.points)) {
+            yield(bots.map { it to Wait }.toMap())
+        }
         val commands = bots.zip(diffs).map { (bot, d) -> bot to GFill(diff, d) }.toMap()
         yield(commands)
         manager.release(bots)
-    }.iterator()
+    }
 }
 
 object SectionTask {
-    operator fun invoke(section: Section, manager: BotManager): Task = buildSequence<Map<Bot, Command>> {
+    operator fun invoke(section: Section, manager: BotManager): Task = TaggedTask("$section") {
         val nothing = emptyMap<Bot, Command>()
         val (bot1, bot2) = doWhileNotNull(nothing) { manager.reserve(2) }
-        while (!manager.system.reserve(section.points)) {
-            yield(mapOf(bot1 to Wait, bot2 to Wait))
-        }
         val diff = NearCoordDiff(0, -1, 0)
         val first = section.first + -diff // best code
         val second = section.second + -diff // best code
@@ -110,19 +109,22 @@ object SectionTask {
                 .forEach { yield(it) }
         val diff1 = (section.second - section.first).toFarCoordDiff()
         val diff2 = (section.first - section.second).toFarCoordDiff()
+        while(!manager.system.reserve(section.points)) {
+            yield(mapOf(bot1 to Wait, bot2 to Wait))
+        }
         yield(mapOf(bot1 to GFill(diff, diff1), bot2 to GFill(diff, diff2)))
         manager.release(listOf(bot1, bot2))
     }.iterator()
 }
 
 object VoxelTask {
-    operator fun invoke(voxel: Voxel, manager: BotManager): Task = buildSequence {
+    operator fun invoke(voxel: Voxel, manager: BotManager): Task = TaggedTask("$voxel") {
         val nothing = emptyMap<Bot, Command>()
         val (bot) = doWhileNotNull(nothing) { manager.reserve(1) }
-        while (!manager.system.reserve(voxel.points)) yield(mapOf(bot to Wait))
         val diff = NearCoordDiff(0, -1, 0)
         val goto = GoTo(bot, voxel.point + -diff, manager)
         goto.forEach { yield(it) }
+        while(!manager.system.reserve(voxel.points)) yield(mapOf(bot to Wait))
         yield(mapOf(bot to Fill(diff)))
         manager.release(listOf(bot))
     }.iterator()
@@ -131,13 +133,13 @@ object VoxelTask {
 fun <T> List<T>.sepWhile(limit: Int = size, predicate: (T) -> Boolean): Pair<List<T>, List<T>> {
     val before = mutableListOf<T>()
     var j = 0
-    for (i in 0..minOf(lastIndex, limit)) {
+    for(i in 0..minOf(lastIndex, limit - 1)) {
         j = i
         val it = get(i)
-        if (predicate(it)) before += it
+        if(predicate(it)) before += it
         else return before to this.subList(i, size)
     }
-    if (before.size == size) return before to listOf()
+    if(before.size == size) return before to listOf()
     return before to subList(before.size, size)
 }
 
@@ -145,7 +147,10 @@ object GoTo {
     fun buildTrace(from: Point, to: Point, system: System): List<Point>? {
         val algo = AStar<Point>(
                 neighbours = { it.immediateNeighbours().filter { system.currentState.canMoveTo(it) } },
-                heuristic = { (it - to).mlen.toLong() },
+                heuristic = {
+                    val diff = it - to
+                    minOf(abs(diff.dx), abs(diff.dy), abs(diff.dz))
+                },
                 goal = { it == to }
         )
         return algo.run(from)?.asList()
@@ -157,21 +162,22 @@ object GoTo {
 
         require(
                 diffs.fold(trace.first()) { p, d -> p + d } == trace.last()
-        ) { "Small diffs messed up =(" }
+        ){"Small diffs messed up =("}
 
         var current = diffs
 
         var forceShort = false
 
-        while (current.isNotEmpty()) {
+        while(current.isNotEmpty()) {
             val pt = current.first()
             val (move, rest) = current.sepWhile(limit = 15) { it.axis == pt.axis }
             current = rest
             if (move.isEmpty()) continue
             if (move.size > 5 && !forceShort) {
                 res += move.reduce<CoordDiff, CoordDiff> { a, b -> a + b }.toLong()
-            } else {
-                if (move.size > 5) {
+            }
+            else {
+                if(move.size > 5) {
                     res += move.take(5).reduce<CoordDiff, CoordDiff> { a, b -> a + b }.toShort()
                     res += move.drop(5).reduce<CoordDiff, CoordDiff> { a, b -> a + b }.toLong()
                 } else {
@@ -183,15 +189,15 @@ object GoTo {
 
         require(
                 res.fold(trace.first()) { p, d -> p + d } == trace.last()
-        ) { "Big diffs messed up =(" }
+        ){"Big diffs messed up =("}
 
         val it = res.iterator()
         val commands = mutableListOf<Command>()
-        while (it.hasNext()) {
+        while(it.hasNext()) {
             val e = it.next()
-            if (e is LongCoordDiff) commands += SMove(e)
-            if (e is ShortCoordDiff) {
-                if (it.hasNext()) {
+            if(e is LongCoordDiff) commands += SMove(e)
+            if(e is ShortCoordDiff) {
+                if(it.hasNext()) {
                     val e2 = it.next() as? ShortCoordDiff ?: throw IllegalArgumentException()
                     commands += LMove(e, e2)
                 } else {
@@ -202,8 +208,8 @@ object GoTo {
         return commands
     }
 
-    operator fun invoke(bot: Bot, point: Point, manager: BotManager): Task = buildSequence {
-        if (bot.position == point) return@buildSequence
+    operator fun invoke(bot: Bot, point: Point, manager: BotManager): Task = TaggedTask("Goto($bot, $point)") {
+        if (bot.position == point) return@TaggedTask
         val system = manager.system
         val wait = mapOf(bot to Wait)
         val trace = doWhileNotNull(wait) { buildTrace(bot.position, point, system) }
@@ -213,23 +219,23 @@ object GoTo {
             yield(mapOf(bot to command))
         }
         system.release(trace)
-    }.iterator()
+    }
 }
 
 private operator fun CoordDiff.plus(b: CoordDiff): CoordDiff =
         CoordDiff(dx + b.dx, dy + b.dy, dz + b.dz)
 
 object GoToBase {
-    operator fun invoke(manager: BotManager): Task = buildSequence {
+    operator fun invoke(manager: BotManager): Task =  TaggedTask("GotoBase()") {
         val numBots = manager.system.numBots
         val points = Pair(Point.ZERO, Point(numBots, 0, 0)).coords()
-        val bots = manager.reserve(numBots) ?: throw IllegalStateException("WTF")
+        val bots =  manager.reserve(numBots) ?: throw IllegalStateException("WTF")
         val goto: List<Task> = bots.zip(points).map { (bot, p) -> GoTo(bot, p, manager) }
         val default = mapOf(bots.first() to Wait)
         val defaults: List<Map<Bot, Command>> = bots.drop(1).map { mapOf(it to Wait) }
-        goto.first().zipWithDefault(default, defaults, goto.drop(1)).asSequence()
+        val subs = goto.first().zipWithDefault(default, defaults, goto.drop(1)).asSequence()
                 .map { it.fold(emptyMap<Bot, Command>()) { acc, m -> acc + m } }
-                .forEach { yield(it) }
+        yieldAll(subs)
         manager.release(bots)
     }.iterator()
 }

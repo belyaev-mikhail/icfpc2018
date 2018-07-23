@@ -1,12 +1,24 @@
 package icfpc2018.solutions
 
 import icfpc2018.bot.commands.Command
+import icfpc2018.bot.commands.Flip
 import icfpc2018.bot.commands.Wait
 import icfpc2018.bot.state.Bot
+import icfpc2018.bot.state.GroundError
+import icfpc2018.bot.state.Harmonics
 import icfpc2018.bot.state.System
 import java.util.*
+import kotlin.coroutines.experimental.SequenceBuilder
+import kotlin.coroutines.experimental.buildIterator
 
 typealias Task = Iterator<Map<Bot, Command>>
+
+data class TaggedTask(val tag: String, val inner: Task): Task by inner {
+    override fun toString() = "$tag"
+
+    constructor(tag: String, innerBuilder: suspend SequenceBuilder<Map<Bot, Command>>.() -> Unit) :
+            this(tag, buildIterator(innerBuilder))
+}
 
 class CollisionError : Exception()
 
@@ -55,6 +67,7 @@ class BotManager(val system: System) {
         for (bot in botPool) {
             if (bot in commands)
                 throw CollisionError()
+//            if(botPool.size != system.numBots) commands[bot] = Wait
             commands[bot] = Wait
         }
         if (commands.values.all { it === Wait })
@@ -64,6 +77,18 @@ class BotManager(val system: System) {
         if (fullWaitCounter == 3)
             throw DeadLockError()
         system.timeStep(commands.values.toList())
+
+//        if (commands.values.all { it === Wait }) return
+
+        if(commands.isNotEmpty()) try {
+            if(system.currentState.harmonics == Harmonics.HIGH && system.currentState.matrix.isEverybodyGrounded) {
+                system.timeStep(commands.map { if(it.key == commands.keys.first()) Flip else Wait })
+            }
+            system.timeStep(commands.values.toList())
+        } catch (ex: GroundError) {
+            system.timeStep(commands.map { if(it.key == commands.keys.first()) Flip else Wait })
+            system.timeStep(commands.values.toList())
+        }
     }
 
     fun apply() {

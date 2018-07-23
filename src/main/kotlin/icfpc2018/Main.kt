@@ -116,21 +116,22 @@ fun assemble(solutionName: String, targetModels: List<String>, resultsDir: Strin
         }
         log.info(solution::class.java.name)
 
-//        try {
+        try {
             solution.solve()
-//        } catch (e: Exception) {
-//            log.error("Solution $solution throwed exception $e")
-//            continue
-//        }
+        } catch (e: Exception) {
+            log.error("Solution $solution throwed exception $e")
+            val ofile = FileOutputStream(File("lastFailure.nbt"))
+            system.commandTrace.forEach { it.write(ofile) }
+            continue
+        }
 
         log.info { "Energy: " + system.currentState.energy }
 
         val success = system.currentState.matrix == targetModel
 
-
         log.info(if (success) "Success" else "Fail")
 
-        if (success) {
+        if (true) {
             val resultTraceFile = "$resultsDir/${targetModelName}_$solutionName.nbt"
             results.addNewResult(targetModelName, solutionName, system.currentState.energy, resultTraceFile)
 
