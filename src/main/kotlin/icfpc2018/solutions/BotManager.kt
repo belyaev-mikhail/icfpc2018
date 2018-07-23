@@ -23,7 +23,7 @@ class CollisionError : Exception()
 
 class DeadLockError : Exception()
 
-class BotManager(val system: System) {
+class BotManager(val system: System, val tryBeatDeadlocks: Boolean) {
     private val botPool = ArrayList<Int>(system.currentState.bots.map { it.id }.toList())
 
     private val taskPool = ArrayList<Task>()
@@ -93,18 +93,21 @@ class BotManager(val system: System) {
 //            if(botPool.size != system.numBots) commands[bot] = Wait
 
             commands[bot] = Wait
-            continue
-            val trye = AStar<Point> (
-                    neighbours = { it.immediateNeighbours().filter { system.currentState.canMoveTo(it) } },
-                    heuristic = { it.z },
-                    goal = { it.z == 0 }
-            ).run(position(bot))?.asList()
-            if(trye != null) {
-                val move = GoTo.convertTrace(trye).firstOrNull() as? SimpleCommand ?: Wait
-                val coords = move.volatileCoords(Bot(id = bot, position = position(bot), seeds = PersistentTreeSet.empty()))
-                system.reserve(coords)
-                reservedForPool.addAll(coords)
-                commands[bot] = move
+            if(tryBeatDeadlocks) {
+                //continue
+                val trye = AStar<Point> (
+                        neighbours = { it.immediateNeighbours().filter { system.currentState.canMoveTo(it) } },
+                        heuristic = { it.z },
+                        goal = { it.z == 0 }
+                ).run(position(bot))?.asList()
+                if(trye != null) {
+                    val move = GoTo.convertTrace(trye).firstOrNull() as? SimpleCommand ?: Wait
+                    val coords = move.volatileCoords(Bot(id = bot, position = position(bot), seeds = PersistentTreeSet.empty()))
+                    val reserveRes = system.reserve(coords, exclude = setOf(position(bot)))
+                    require(reserveRes)
+                    reservedForPool.addAll(coords)
+                    commands[bot] = move
+                }
             }
         }
         system.release(reservedForPool)
@@ -119,6 +122,8 @@ class BotManager(val system: System) {
             fullWaitCounter = 0
 
         if (commands.isNotEmpty()) {
+            val botPositions = commands.mapValues { position(it.key) }
+
             val timeStamp = system.timeStamp()
             try {
                 if (system.currentState.matrix.isEverybodyGrounded)
@@ -129,6 +134,16 @@ class BotManager(val system: System) {
                 flipTo(Harmonics.HIGH, commands)
                 system.timeStep(commands.values.toList())
             }
+//            commands.forEach { b, c -> when(c){
+//                is SMove -> {
+//                    system.release(c.volatileCoords(Bot(id = b, position = botPositions[b]!!, seeds = PersistentTreeSet.empty())))
+//                    system.reserve(setOf(botPositions[b]!!))
+//                }
+//                is LMove -> {
+//                    system.release(c.volatileCoords(Bot(id = b, position = botPositions[b]!!, seeds = PersistentTreeSet.empty())))
+//                    system.reserve(setOf(botPositions[b]!!))
+//                }
+//            } }
             if (system.currentState.matrix.isEverybodyGrounded)
                 flipTo(Harmonics.LOW, null)
         }

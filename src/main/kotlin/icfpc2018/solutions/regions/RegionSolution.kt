@@ -8,7 +8,7 @@ import icfpc2018.solutions.Solution
 import icfpc2018.solutions.sections.indices
 
 
-class RegionSolution(val target: Model, val system: System) : Solution {
+class RegionSolution(val target: Model, val system: System, val tryBeatDeadlocks: Boolean) : Solution {
 
     private val regions = split(target)
 
@@ -40,7 +40,7 @@ class RegionSolution(val target: Model, val system: System) : Solution {
     }
 
     private fun goToBase() {
-        val manager = BotManager(system)
+        val manager = BotManager(system, tryBeatDeadlocks)
         manager.add(GoToBase(manager))
         manager.apply()
     }
@@ -71,7 +71,7 @@ class RegionSolution(val target: Model, val system: System) : Solution {
     }
 
     private fun layer(layer: List<Region>) {
-        val manager = BotManager(system)
+        val manager = BotManager(system, tryBeatDeadlocks)
         for (region in layer) {
             val task = when (region) {
                 is Rectangle -> RectangleTask(region, manager)

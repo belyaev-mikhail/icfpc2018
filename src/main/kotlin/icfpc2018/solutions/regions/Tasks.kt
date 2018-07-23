@@ -249,20 +249,31 @@ object GoTo {
         if (from == to) return@TaggedTask
         val system = manager.system
         val wait = mapOf(bid to Wait)
-        val trace = doWhileNotNull(wait) { buildTrace(from, to, system) }
-        var previousCommand: Command? = null
+        val trace = doWhileNotNull(wait) {
+            val trace_ = buildTrace(from, to, system)
+            trace_?.apply {
+                if (!system.reserve(trace_, exclude = setOf(from)))
+                    throw IllegalStateException("Cannot reserve")
+            }
+        }
+        val previousCommands: MutableList<Command> = mutableListOf()
         val previousBotPositions: MutableList<Point> = mutableListOf()
-        if (!system.reserve(trace, exclude = setOf(from)))
-            throw IllegalStateException("Cannot reserve")
+
         for (command in convertTrace(trace)) {
             previousBotPositions += manager.position(bid)
             yield(mapOf(bid to command))
-//            previousCommand?.let {
-//                val pos = previousBotPositions[previousBotPositions.lastIndex - 1]
-//                system.release((it as SimpleCommand).volatileCoords(Bot(id = bid, position = pos, seeds = PersistentTreeSet.empty())))
-//                system.reserve(setOf(previousBotPositions.last()))
-//            }
-//            previousCommand = command
+            if(previousCommands.size > 2) {
+                val it = previousCommands[previousCommands.lastIndex - 2]
+                val pos = previousBotPositions[previousBotPositions.lastIndex - 3]
+//                when {
+//                    it is SMove -> require(pos + it.lld == previousBotPositions.last())
+//                    it is LMove -> require(pos + it.sld1 + it.sld2 == previousBotPositions.last())
+//                }
+               // system.release((it as SimpleCommand).volatileCoords(Bot(id = bid, position = pos, seeds = PersistentTreeSet.empty())))
+               // system.reserve((it as SimpleCommand).volatileCoords(Bot(id = bid, position = pos, seeds = PersistentTreeSet.empty())))
+                //system.reserve(setOf(previousBotPositions[previousBotPositions.lastIndex - 2]))
+            }
+            previousCommands += command
         }
         system.release(trace)
     }
