@@ -28,6 +28,10 @@ class BotManager(val system: System) {
 
     fun add(task: Task) = taskPool.add(task)
 
+    fun position(bid: Int) = system.currentState.bots
+            .find { it.id == bid }?.position
+            ?: throw IllegalArgumentException("bot $bid ot found")
+
     fun positions(bids: Set<Int>): Map<Int, Point> = system.currentState.bots
             .filter { it.id in bids }
             .map { it.id to it.position }

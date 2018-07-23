@@ -74,8 +74,7 @@ object RectangleTask {
         val p3 = rectangle.p3 + -diff // best code
         val p4 = rectangle.p4 + -diff // best code
         val points = listOf(p1, p2, p3, p4)
-        val positions = manager.positions(bots.toSet())
-        val goto: List<Task> = bots.zip(points).map { (bot, p) -> GoTo(bot, positions[bot]!!, p, manager) }
+        val goto: List<Task> = bots.zip(points).map { (bot, p) -> GoTo(bot, p, manager) }
         val default = mapOf(bots.first() to Wait)
         val defaults = bots.drop(1).map { mapOf(it to Wait) }
         goto.first().zipWithDefault(default, defaults, goto.drop(1)).asSequence()
@@ -102,9 +101,8 @@ object SectionTask {
         val diff = NearCoordDiff(0, -1, 0)
         val first = section.first + -diff // best code
         val second = section.second + -diff // best code
-        val positions = manager.positions(setOf(bot1, bot2))
-        val goto1 = GoTo(bot1, positions[bot1]!!, first, manager)
-        val goto2 = GoTo(bot2, positions[bot2]!!, second, manager)
+        val goto1 = GoTo(bot1, first, manager)
+        val goto2 = GoTo(bot2, second, manager)
         val default1 = mapOf(bot1 to Wait)
         val default2 = mapOf(bot2 to Wait)
         goto1.zipWithDefault(default1, default2, goto2).asSequence()
@@ -133,8 +131,7 @@ object VoxelTask {
         val nothing = emptyMap<Int, Command>()
         val (bot) = doWhileNotNull(nothing) { manager.reserve(1) }
         val diff = NearCoordDiff(0, -1, 0)
-        val positions = manager.positions(setOf(bot))
-        val goto = GoTo(bot, positions[bot]!!, voxel.point + -diff, manager)
+        val goto = GoTo(bot, voxel.point + -diff, manager)
         goto.forEach { yield(it) }
         while (!manager.system.reserve(voxel.points)) yield(mapOf(bot to Wait))
         yield(mapOf(bot to Fill(diff)))
@@ -219,7 +216,8 @@ object GoTo {
         return commands
     }
 
-    operator fun invoke(bid: Int, from: Point, to: Point, manager: BotManager): Task = TaggedTask("Goto(Bot(id=$bid), $to)") {
+    operator fun invoke(bid: Int, to: Point, manager: BotManager): Task = TaggedTask("Goto(Bot(id=$bid), $to)") {
+        val from = manager.position(bid)
         if (from == to) return@TaggedTask
         val system = manager.system
         val wait = mapOf(bid to Wait)
@@ -241,8 +239,7 @@ object GoToBase {
         val numBots = manager.system.numBots
         val points = Pair(Point.ZERO, Point(numBots, 0, 0)).coords()
         val bots = manager.reserve(numBots) ?: throw IllegalStateException("WTF")
-        val positions = manager.positions(bots.toSet())
-        val goto: List<Task> = bots.zip(points).map { (bot, p) -> GoTo(bot, positions[bot]!!, p, manager) }
+        val goto: List<Task> = bots.zip(points).map { (bot, p) -> GoTo(bot, p, manager) }
         val default = mapOf(bots.first() to Wait)
         val defaults = bots.drop(1).map { mapOf(it to Wait) }
         val subs = goto.first().zipWithDefault(default, defaults, goto.drop(1)).asSequence()
