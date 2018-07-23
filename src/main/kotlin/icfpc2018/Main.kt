@@ -84,28 +84,30 @@ fun submitChecked(resultDirs: List<String>) {
     ZipWriter().createZip("submit/")
 }
 
-fun assemble(solutionName: String, targetModels: List<String>, resultsDir: String) {
+fun assemble(solutionName: String, targetModelNums: List<Int>, resultsDir: String) {
     val results = Results.readFromDirectory(resultsDir)
-    for (targetModelName in targetModels) {
-        log.info("Running with model $targetModelName")
-        val targetModelFile = File("models/${targetModelName}_tgt.mdl").inputStream()
+    for (modelNum in targetModelNums) {
+        val atargetModelName = Arguments.modelNames.getValue(RunMode.ASSEMBLE).format(modelNum)
+        val dtargetModelName = Arguments.modelNames.getValue(RunMode.DISASSEMBLE).format(modelNum)
+        log.info("Running with model $modelNum")
+        val targetModelFile = File("models/${atargetModelName}_tgt.mdl").inputStream()
         val targetModel = Model.readMDL(targetModelFile)
 
         val model = Model(targetModel.size)
         val bot = Bot(1, Point(0, 0, 0), PersistentTreeSet.of(2..Config.maxBots))
         val state = State(0, Harmonics.LOW, model, VolatileModel(), persistentTreeSetOf(bot))
 
-        val system = System(state)
+        val assembleSystem = System(state)
         val solution = when (solutionName) {
             "trace" -> {
-                val traceFile = File("traces/$targetModelName.nbt").inputStream()
+                val traceFile = File("traces/$atargetModelName.nbt").inputStream()
                 val commands: MutableList<Command> = mutableListOf()
                 while (traceFile.available() != 0) {
                     commands += Command.read(traceFile)
                 }
-                Trace(commands, system)
+                Trace(commands, assembleSystem)
             }
-            else -> getSolutionByName(solutionName, targetModel, system)
+            else -> getSolutionByName(solutionName, targetModel, assembleSystem)
         }
         log.info(solution::class.java.name)
 
@@ -113,30 +115,43 @@ fun assemble(solutionName: String, targetModels: List<String>, resultsDir: Strin
             solution.solve()
         } catch (e: Exception) {
             log.error("Solution $solution throwed exception $e")
-            e.printStackTrace()
-            val ofile = FileOutputStream(File("lastFailure.nbt"))
-            system.commandTrace.forEach { it.write(ofile) }
             continue
         }
 
-        log.info { "Energy: " + system.currentState.energy }
+        val resultingTrace = Trace(assembleSystem.commandTrace, System(state)).inverted()
 
-        val success = system.currentState.matrix == targetModel
+        log.info { "Energy: " + assembleSystem.currentState.energy }
+
+        val success = assembleSystem.currentState.matrix == targetModel
+
 
         log.info(if (success) "Success" else "Fail")
 
-        if (true) {
-            val resultTraceFile = "$resultsDir/${targetModelName}_$solutionName.nbt"
-            results.addNewResult(targetModelName, solutionName, system.currentState.energy, resultTraceFile)
-            results.writeToDirectory(resultsDir)
+        if (success) {
+            run {
+                val resultTraceFile = "$resultsDir/${atargetModelName}_$solutionName.nbt"
+                log.info("Dumping assemble results to $resultTraceFile")
+                results.addNewResult(atargetModelName, solutionName, assembleSystem.currentState.energy, resultTraceFile)
+                results.writeToDirectory(resultsDir)
 
-            val ofile = FileOutputStream(File(resultTraceFile))
-            system.commandTrace.forEach { it.write(ofile) }
-            log.info("Results dumped")
-            ofile.close()
+                val ofile = FileOutputStream(File(resultTraceFile))
+                assembleSystem.commandTrace.forEach { it.write(ofile) }
+                log.info("Results dumped")
+                ofile.close()
+            }
+            run {
+                val resultTraceFile = "$resultsDir/${dtargetModelName}_$solutionName.nbt"
+                log.info("Dumping disassemble results to $resultTraceFile")
+                results.addNewResult(atargetModelName, solutionName, assembleSystem.currentState.energy, resultTraceFile)
+                results.writeToDirectory(resultsDir)
+
+                val ofile = FileOutputStream(File(resultTraceFile))
+                resultingTrace.forEach { it.write(ofile) }
+                log.info("Results dumped")
+                ofile.close()
+            }
         }
     }
-
     results.writeToDirectory(resultsDir)
 }
 
@@ -375,7 +390,7 @@ fun main(args: Array<String>) {
 
     when (arguments.getMode()) {
         RunMode.ALL -> doAll(arguments)
-        RunMode.ASSEMBLE -> assemble(arguments.getSolution(), arguments.getModels(), arguments.getResults())
+        RunMode.ASSEMBLE -> assemble(arguments.getSolution(), arguments.getModelNums(RunMode.ASSEMBLE), arguments.getResults())
         RunMode.DISASSEMBLE -> disassemble(arguments.getSolution(), arguments.getModels(), arguments.getResults())
         RunMode.REASSEMBLE -> reassemble(arguments.getSolution(), arguments.getModels(), arguments.getResults())
         RunMode.SUBMIT -> submit(arguments.getSubmitDirectories())

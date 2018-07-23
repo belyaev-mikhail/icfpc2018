@@ -14,20 +14,30 @@ class Portfolio(val target: Model, val system: System) : Solution {
     val initialState = State(0, Harmonics.LOW, model, VolatileModel(), persistentTreeSetOf(bot))
 
     companion object {
-        val solutionNames = listOf("grounded_slices", "grounded_bounded_slices")
+        val solutionNames = listOf("grounded_slices", "grounded_bounded_slices", "regions")
     }
 
     override fun solve() {
         var initialized = false
         var bestSolutionName = "none"
         for (solutionName in solutionNames) {
-            val solutionSystem = System(initialState)
+            var solutionSystem = System(initialState)
             val solution = getSolutionByName(solutionName, target, solutionSystem)
             try {
                 solution.solve()
             } catch (e: Exception) {
                 log.error("Solution $solutionName throwed exception $e")
-                continue
+
+                if (solutionName == "regions") {
+                    try {
+                        solutionSystem = System(initialState)
+                        val newSolution = getSolutionByName("regions_deadlocks", target, solutionSystem)
+                        newSolution.solve()
+                    } catch (e: Exception) {
+                        log.info("Regions deadlocks didn't help")
+                        continue
+                    }
+                } else continue
             }
 
             if (solutionSystem.currentState.matrix == target) {
